@@ -66,11 +66,15 @@
   #hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;
     color:var(--dim);font-size:15px;pointer-events:none;padding:24px}
   .kbd{color:var(--violet);font-family:var(--mono)}
+  .beta{display:inline-block;margin-left:7px;padding:1px 7px;border:1px solid var(--amber);border-radius:999px;color:var(--amber);font:700 9px/1.5 var(--mono);letter-spacing:.16em;text-transform:uppercase;vertical-align:middle}
   @media (max-width:760px){
-    #app{flex-direction:column}
-    #panel{width:100%;flex:0 0 auto;max-height:54vh;order:2;border-right:none;border-top:1px solid var(--bd)}
-    #stage{order:1;flex:1 1 auto;min-height:46vh}
-    input[type=range]{height:26px} select,button{font-size:14px}
+    html,body{overflow:auto}
+    #app{flex-direction:column;height:auto;min-height:100%}
+    #stage{order:1;width:100%;height:58vh;min-height:330px;flex:none}
+    #panel{order:2;width:100%;max-height:none;flex:none;border-right:none;border-top:1px solid var(--bd);padding:14px 16px 40px}
+    input[type=range]{height:28px}
+    select,button{font-size:14px}
+    h1{font-size:17px}
   }
 </style>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Ccircle%20cx='16'%20cy='16'%20r='16'%20fill='%2308080f'/%3E%3Cline%20x1='16'%20y1='16'%20x2='23'%20y2='8'%20stroke='%237cc7ff'%20stroke-width='2'%20stroke-linecap='round'/%3E%3Ccircle%20cx='23'%20cy='8'%20r='2.6'%20fill='%237cc7ff'/%3E%3C/svg%3E">
@@ -78,7 +82,7 @@
 <body>
 <div id="app">
   <div id="panel">
-    <h1>Single Qubit Synth</h1>
+    <h1>Single Qubit Synth <span class="beta">beta</span></h1>
     <p class="sub" data-t="sub">precessione continua · misura</p>
 
     <div class="transport">
@@ -303,10 +307,15 @@ function collapseFreq(b,bit,fRef){
 
 /* ---- audio ---- */
 var AC=null,master,leadOsc,leadOsc2,leadGain,leadFilter,tremGain,lfoDepth,panner,o0,o1,g0,g1,bedGain,started=false;
+var MOBILE=(window.matchMedia&&window.matchMedia('(max-width:760px)').matches)||/Mobi|Android|iPhone|iPod/i.test(navigator.userAgent||'');
 function initAudio(){
   if(started)return;
   AC=new (window.AudioContext||window.webkitAudioContext)();
-  master=AC.createGain();master.gain.value=P.vol;master.connect(AC.destination);
+  master=AC.createGain();master.gain.value=P.vol;
+  // phones output quietly -> makeup gain, then a brickwall limiter so the extra gain never clips
+  var outGain=AC.createGain();outGain.gain.value=MOBILE?1.85:1.0;
+  var lim=AC.createDynamicsCompressor();lim.threshold.value=-1.5;lim.knee.value=0;lim.ratio.value=20;lim.attack.value=0.002;lim.release.value=0.12;
+  master.connect(outGain);outGain.connect(lim);lim.connect(AC.destination);
   // reverb (feedback delay) — a touch more wet for warmth
   var send=AC.createGain();send.gain.value=0.32;var d=AC.createDelay();d.delayTime.value=0.19;
   var fb=AC.createGain();fb.gain.value=0.4;var wet=AC.createGain();wet.gain.value=0.9;

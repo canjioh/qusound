@@ -82,6 +82,7 @@ a:hover{ color:#9adcff; }
 .brand{ display:flex; align-items:center; gap:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }
 .brand .dot{ width:30px; height:30px; flex:0 0 auto; }
 .brand small{ color:var(--faint); font-weight:600; font-size:12px; letter-spacing:.12em; margin-left:2px; }
+.betachip{ display:inline-block; margin-left:6px; padding:1px 8px; border:1px solid var(--hz); border-radius:999px; color:var(--hz); font:700 9px/1.5 var(--mono,monospace); letter-spacing:.18em; text-transform:uppercase; vertical-align:middle; }
 .topbar .sp{ flex:1; }
 .langbtn{
   background:linear-gradient(180deg,#20242a,#14161a); color:var(--ink);

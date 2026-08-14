@@ -124,7 +124,7 @@
     mount.innerHTML =
       '<div class="wrap">'+
         '<div class="topbar"><span class="brand">'+brandDot()+
-          '<span>QuSound <small>QuantumJazzStation</small></span></span>'+
+          '<span>QuSound <small>QuantumJazzStation</small> <span class="betachip">beta</span></span></span>'+
           '<span class="sp"></span>'+langBtn()+'</div>'+
         '<header class="hero">'+
           '<div class="hero__plate engrave">MODEL Q·1<br>REV 2026 · S/N ψ-0001</div>'+

@@ -72,14 +72,23 @@
   #lang{position:absolute;top:12px;right:12px;padding:7px 14px;background:rgba(20,20,40,.6);color:var(--dim);border:1px solid var(--bd);border-radius:999px;cursor:pointer;font:inherit;font-size:13px;backdrop-filter:blur(8px);z-index:4}
   #hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--dim);font-size:15px;pointer-events:none;padding:24px}
   .kbd{color:var(--violet);font-family:var(--mono)}
-  @media (max-width:760px){#app{flex-direction:column}#panel{width:100%;flex:0 0 auto;max-height:56vh;order:2;border-right:none;border-top:1px solid var(--bd)}#stage{order:1;flex:1 1 auto;min-height:44vh}input[type=range]{height:26px}select,button{font-size:14px}}
+  .beta{display:inline-block;margin-left:7px;padding:1px 7px;border:1px solid var(--amber);border-radius:999px;color:var(--amber);font:700 9px/1.5 var(--mono);letter-spacing:.16em;text-transform:uppercase;vertical-align:middle}
+  @media (max-width:760px){
+    html,body{overflow:auto}
+    #app{flex-direction:column;height:auto;min-height:100%}
+    #stage{order:1;width:100%;height:58vh;min-height:330px;flex:none}
+    #panel{order:2;width:100%;max-height:none;flex:none;border-right:none;border-top:1px solid var(--bd);padding:14px 16px 40px}
+    input[type=range]{height:28px}
+    select,button{font-size:14px}
+    h1{font-size:17px}
+  }
 </style>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Ccircle%20cx='16'%20cy='16'%20r='16'%20fill='%2308080f'/%3E%3Cline%20x1='16'%20y1='16'%20x2='23'%20y2='8'%20stroke='%237cc7ff'%20stroke-width='2'%20stroke-linecap='round'/%3E%3Ccircle%20cx='23'%20cy='8'%20r='2.6'%20fill='%237cc7ff'/%3E%3C/svg%3E">
 </head>
 <body>
 <div id="app">
   <div id="panel">
-    <h1>Quantum Band</h1>
+    <h1>Quantum Band <span class="beta">beta</span></h1>
     <p class="sub" data-t="sub">registro a più qubit · accoppiamento</p>
 
     <div class="transport">
@@ -329,12 +338,16 @@ function measureAll(){ for(var i=0;i<NQ;i++) measureQ(i,basis); }
 var AC=null,master,haze,hazeGain,voices=[],started=false;
 function makeNoise(){var len=AC.sampleRate*2,buf=AC.createBuffer(1,len,AC.sampleRate),d=buf.getChannelData(0);
   var lp=0;for(var i=0;i<len;i++){var w=Math.random()*2-1;lp=(lp*0.97)+(w*0.03);d[i]=lp*3;}var s=AC.createBufferSource();s.buffer=buf;s.loop=true;return s;}
+var MOBILE=(window.matchMedia&&window.matchMedia('(max-width:760px)').matches)||/Mobi|Android|iPhone|iPod/i.test(navigator.userAgent||'');
 function initAudio(){
   if(started)return;
   AC=new (window.AudioContext||window.webkitAudioContext)();
   master=AC.createGain();master.gain.value=P.vol;
   var comp=AC.createDynamicsCompressor();comp.threshold.value=-14;comp.knee.value=20;comp.ratio.value=4;comp.attack.value=0.005;comp.release.value=0.18;
-  master.connect(comp);comp.connect(AC.destination);
+  // phones output quietly -> makeup gain, then a brickwall limiter so the extra gain never clips
+  var outGain=AC.createGain();outGain.gain.value=MOBILE?1.85:1.0;
+  var lim=AC.createDynamicsCompressor();lim.threshold.value=-1.5;lim.knee.value=0;lim.ratio.value=20;lim.attack.value=0.002;lim.release.value=0.12;
+  master.connect(comp);comp.connect(outGain);outGain.connect(lim);lim.connect(AC.destination);
   var send=AC.createGain();send.gain.value=0.24;var d=AC.createDelay();d.delayTime.value=0.17;var fb=AC.createGain();fb.gain.value=0.34;
   master.connect(send);send.connect(d);d.connect(fb);fb.connect(d);d.connect(comp);
   // global decoherence haze
@@ -497,50 +510,56 @@ function render(now){
   if(!paused){ localStep(dt); couplingStep(dt); normalize(); }
 
   ctx.clearRect(0,0,W,H2);
-  var n=NQ; var pad=Math.min(W/(n+1),150); var sr=Math.min(pad*0.42, H2*0.30);
-  var cxs=[]; for(var i=0;i<n;i++){cxs.push((i+1)*(W/(n+1)));}
-  var cyv=H2*0.44;
+  var n=NQ, portrait=(W < H2*1.15 && n>=3), cxs=[], cys=[], sr;
+  if(portrait){                       // mobile portrait: 2 columns so the spheres aren't cramped
+    var cols=2, rows=Math.ceil(n/cols), cellW=W/cols, cellH=H2/rows;
+    sr=Math.min(cellW*0.38, cellH*0.30);
+    for(var i=0;i<n;i++){cxs.push(((i%cols)+0.5)*cellW); cys.push((Math.floor(i/cols)+0.5)*cellH - cellH*0.05);}
+  }else{                              // wide screens: single row (unchanged desktop layout)
+    var pad=Math.min(W/(n+1),150); sr=Math.min(pad*0.42, H2*0.30);
+    for(var i=0;i<n;i++){cxs.push((i+1)*(W/(n+1))); cys.push(H2*0.44);}
+  }
 
   // coupling links (per the chosen network) — opacity ~ J
   if(P.coup>0){ctx.strokeStyle='rgba(181,140,255,'+(0.15+0.55*P.coup)+')';ctx.lineWidth=1+2*P.coup;ctx.setLineDash([4,4]);
-    for(var i2=0;i2<couplingPairs.length;i2++){var a=couplingPairs[i2][0],bq=couplingPairs[i2][1];if(a<n&&bq<n){ctx.beginPath();ctx.moveTo(cxs[a],cyv);ctx.lineTo(cxs[bq],cyv);ctx.stroke();}}ctx.setLineDash([]);}
+    for(var i2=0;i2<couplingPairs.length;i2++){var a=couplingPairs[i2][0],bq=couplingPairs[i2][1];if(a<n&&bq<n){ctx.beginPath();ctx.moveTo(cxs[a],cys[a]);ctx.lineTo(cxs[bq],cys[bq]);ctx.stroke();}}ctx.setLineDash([]);}
 
   var avgVeil=0, mini=(viewMode==='minimal');
   for(var i3=0;i3<n;i3++){
     var scx=cxs[i3];
     var e=expect(i3); avgVeil+=(1-e.r); var coreR=Math.max(0.5,e.r*sr); var col=INST[i3].col;
     // glow if flashing
-    if(flash[i3]>0){ctx.fillStyle='rgba('+hex2(col)+','+(flash[i3]*0.22)+')';ctx.beginPath();ctx.arc(scx,cyv,sr*1.5,0,2*Math.PI);ctx.fill();flash[i3]-=0.05;if(flash[i3]<0)flash[i3]=0;}
+    if(flash[i3]>0){ctx.fillStyle='rgba('+hex2(col)+','+(flash[i3]*0.22)+')';ctx.beginPath();ctx.arc(scx,cys[i3],sr*1.5,0,2*Math.PI);ctx.fill();flash[i3]-=0.05;if(flash[i3]<0)flash[i3]=0;}
     // sphere fill (skip in minimal) — alphas kept high enough to survive video compression on the dark background
-    if(!mini){var grd=ctx.createRadialGradient(scx-sr*0.3,cyv-sr*0.4,sr*0.1,scx,cyv,sr*1.15);
+    if(!mini){var grd=ctx.createRadialGradient(scx-sr*0.3,cys[i3]-sr*0.4,sr*0.1,scx,cys[i3],sr*1.15);
       grd.addColorStop(0,'rgba(124,140,255,.18)');grd.addColorStop(1,'rgba(10,10,26,.07)');
-      ctx.fillStyle=grd;ctx.beginPath();ctx.arc(scx,cyv,sr,0,2*Math.PI);ctx.fill();}
+      ctx.fillStyle=grd;ctx.beginPath();ctx.arc(scx,cys[i3],sr,0,2*Math.PI);ctx.fill();}
     // silhouette (always — a profile)
-    ctx.strokeStyle='rgba(170,178,230,'+(mini?.55:.4)+')';ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(scx,cyv,sr,0,2*Math.PI);ctx.stroke();
+    ctx.strokeStyle='rgba(170,178,230,'+(mini?.55:.4)+')';ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(scx,cys[i3],sr,0,2*Math.PI);ctx.stroke();
     // great-circle profiles — bolder & more opaque so the colours read after H.264/VP9 encoding
-    if(mini){ ring(scx,cyv,sr,'z','rgba(160,170,230,.55)',2.2); }
-    else { ring(scx,cyv,sr,'z','rgba(140,150,225,.52)',2.2);ring(scx,cyv,sr,'x','rgba(255,120,140,.5)',2.2);ring(scx,cyv,sr,'y','rgba(105,230,150,.5)',2.2); }
+    if(mini){ ring(scx,cys[i3],sr,'z','rgba(160,170,230,.55)',2.2); }
+    else { ring(scx,cys[i3],sr,'z','rgba(140,150,225,.52)',2.2);ring(scx,cys[i3],sr,'x','rgba(255,120,140,.5)',2.2);ring(scx,cys[i3],sr,'y','rgba(105,230,150,.5)',2.2); }
     // ---- purity core = the Bloch BALL. Radius = |r|: pure -> surface, entangled -> toward centre ----
     if(!mini){
-      var cg=ctx.createRadialGradient(scx,cyv,0,scx,cyv,Math.max(1,coreR));
+      var cg=ctx.createRadialGradient(scx,cys[i3],0,scx,cys[i3],Math.max(1,coreR));
       cg.addColorStop(0,'rgba('+hex2(col)+',0.46)');cg.addColorStop(1,'rgba('+hex2(col)+',0.10)');
-      ctx.fillStyle=cg;ctx.beginPath();ctx.arc(scx,cyv,Math.max(1,coreR),0,2*Math.PI);ctx.fill();
+      ctx.fillStyle=cg;ctx.beginPath();ctx.arc(scx,cys[i3],Math.max(1,coreR),0,2*Math.PI);ctx.fill();
       ctx.strokeStyle='rgba('+hex2(col)+',0.7)';ctx.setLineDash([3,3]);ctx.lineWidth=1.4;
-      ctx.beginPath();ctx.arc(scx,cyv,Math.max(1,coreR),0,2*Math.PI);ctx.stroke();ctx.setLineDash([]);
-      if(e.r<0.12){ctx.fillStyle='rgba('+hex2(col)+',0.9)';ctx.beginPath();ctx.arc(scx,cyv,2.5,0,2*Math.PI);ctx.fill();}
+      ctx.beginPath();ctx.arc(scx,cys[i3],Math.max(1,coreR),0,2*Math.PI);ctx.stroke();ctx.setLineDash([]);
+      if(e.r<0.12){ctx.fillStyle='rgba('+hex2(col)+',0.9)';ctx.beginPath();ctx.arc(scx,cys[i3],2.5,0,2*Math.PI);ctx.fill();}
     }
     // reduced vector — length = |r| = purity; the tip sits on the purity shell
-    var tip=projC([e.x,e.y,e.z],scx,cyv,sr),o=projC([0,0,0],scx,cyv,sr);
+    var tip=projC([e.x,e.y,e.z],scx,cys[i3],sr),o=projC([0,0,0],scx,cys[i3],sr);
     ctx.strokeStyle=col;ctx.lineWidth=2.6;ctx.shadowColor=col;ctx.shadowBlur=10*e.r+2;
     ctx.beginPath();ctx.moveTo(o.x,o.y);ctx.lineTo(tip.x,tip.y);ctx.stroke();
     ctx.beginPath();ctx.arc(tip.x,tip.y,5,0,2*Math.PI);ctx.fillStyle='#fff';ctx.globalAlpha=0.4+0.6*e.r;ctx.fill();ctx.globalAlpha=1;ctx.shadowBlur=0;
     // labels (full view only — hidden for clean recording)
     if(viewMode==='full'){
       ctx.fillStyle=col;ctx.font='600 13px '+getComputedStyle(document.body).getPropertyValue('--sans');ctx.textAlign='center';
-      ctx.fillText(INST[i3].nm[LANG],scx,cyv+sr+24);
+      ctx.fillText(INST[i3].nm[LANG],scx,cys[i3]+sr+24);
       ctx.fillStyle='rgba(160,168,200,.7)';ctx.font='11px '+getComputedStyle(document.body).getPropertyValue('--mono');
       var wlab=e.r>0.9?T('wPure'):(e.r>0.35?T('wMixed'):T('wMax'));
-      ctx.fillText('|r|='+e.r.toFixed(2)+' · '+wlab,scx,cyv+sr+40);
+      ctx.fillText('|r|='+e.r.toFixed(2)+' · '+wlab,scx,cys[i3]+sr+40);
       ctx.textAlign='left';
     }
     var pe=document.getElementById('pur'+i3);if(pe)pe.textContent=Math.round(e.r*100)+'%';
