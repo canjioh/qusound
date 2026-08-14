@@ -188,6 +188,7 @@
     <div class="card"><div class="read" id="readout"></div></div>
 
     <div class="card">
+      <!-- SEZIONE REGISTRAZIONE NASCOSTA ONLINE (in test). Per riattivarla cancella questa riga di apertura e la riga di chiusura del commento in fondo al blocco.
       <h2 data-t="hrec">registrazione</h2>
       <label data-t="lview">vista (per registrazione / live)</label>
       <select id="viewsel">
@@ -195,7 +196,6 @@
         <option value="spheres" data-t="vwsph">solo sfera</option>
         <option value="minimal" data-t="vwmin">essenziale (profili)</option>
       </select>
-<!-- REC NASCOSTO ONLINE (in test). Per riattivarlo cancella questa riga e la riga di chiusura del commento in fondo al blocco.
       <div class="recrow" style="margin-top:9px">
         <select id="recmode">
           <option value="mp4">video + audio · mp4</option>
@@ -411,7 +411,7 @@ rng('omega','vomega','omega',2);rng('delta','vdelta','delta',2);rng('speed','vsp
 rng('root','vroot','root');rng('range','vrange','range');rng('lead','vlead','lead',2);rng('bed','vbed','bed',2);rng('vol','vvol','vol',2);rng('cut','vcut','cut');
 document.getElementById('quant').addEventListener('change',function(){P.quant=this.checked;});
 document.getElementById('scale').addEventListener('change',function(){SCALE=this.value.split(',').map(Number);});
-document.getElementById('viewsel').addEventListener('change',function(){viewMode=this.value;});
+var _viewsel=document.getElementById('viewsel');if(_viewsel)_viewsel.addEventListener('change',function(){viewMode=this.value;});
 var autoTimer=null, autoStep=0;
 function autoInterval(){
   var bpm=parseFloat(document.getElementById('bpm').value);
