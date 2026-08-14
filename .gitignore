@@ -1,0 +1,8 @@
+# PDF sorgente dei paper: non servono al sito (la bibliografia rimanda ad arXiv)
+# e peserebbero ~16 MB. Rimuovi questa riga se vuoi includerli nel repo.
+Paper/
+
+# spazzatura di sistema
+.DS_Store
+Thumbs.db
+desktop.ini

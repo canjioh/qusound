@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QuSound :: about</title>
+<link rel="stylesheet" href="assets/theme.css">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+</head>
+<body>
+<main>
+  <div class="wrap">
+    <div class="topbar"><a class="brand" href="./" style="color:inherit">
+      <svg class="dot" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="14" stroke="#3a3a6a" stroke-width="1.2"/><ellipse cx="16" cy="16" rx="14" ry="5" stroke="#33335c" stroke-width="1.1"/><line x1="16" y1="16" x2="24" y2="7" stroke="#7cc7ff" stroke-width="2" stroke-linecap="round"/><circle cx="24" cy="7" r="2.6" fill="#7cc7ff"/></svg>
+      <span><b>QuSound</b><small>/ about</small></span></a>
+      <span class="sp"></span><button class="langbtn" id="qlang"></button></div>
+    <div class="doc">
+      <a class="backlink" href="./" data-t="back">← station</a>
+      <h1 data-t="h1"></h1>
+      <div class="prose lead"><p data-t="p1"></p></div>
+      <div class="h2" data-t="hRef"></div>
+      <div class="prose">
+        <p data-t="pr1"></p>
+        <p data-t="pr2"></p>
+      </div>
+      <div class="h2" data-t="hPipe"></div>
+      <div class="prose">
+        <p data-t="phtml"></p>
+        <p data-t="psib"></p>
+      </div>
+      <footer class="foot"><span><a href="./" data-t="back2"></a></span></footer>
+    </div>
+  </div>
+</main>
+<script>
+(function(){
+  var LANG=(function(){ try{return localStorage.getItem('qlang')||'it';}catch(e){return 'it';} })();
+  var S={
+    it:{ back:'← station', back2:'← station', h1:'about / colophon',
+      p1:"qubit è una stazione di sonificazione quantistica, la gemella di n_c_c_n, dove però il suono nasce dalla meccanica quantistica invece che dal caos deterministico. Nel caos l'imprevedibilità è solo apparente, perché le equazioni sono esatte; qui invece il caso è reale, dato che la misura di un qubit è genuinamente non deterministica. Con l'entanglement anche la relazione tra le voci diventa quantistica.",
+      hRef:'Riferimenti',
+      pr1:"B. Coecke, «A Quantum Guitar», arXiv:2509.04526 (2025). Quantizzare le corde di una chitarra, un qubit per stato suonabile, con transizione continua tra classico e quantistico.",
+      pr2:"R.-B. Abdyssagin e B. Coecke, «Quantum Concept Music Score from Quantum Picturalism», arXiv:2510.05391 (2025). Notazione musicale dallo ZX-calculus, la misura come cuore compositivo, i colori Z (verde) e X (rosso), la performance della coppia di Bell.",
+      hPipe:'Pipeline',
+      phtml:"HTML, Canvas e WebAudio, senza dipendenze. Ogni strumento è un singolo file autosufficiente. L'evoluzione unitaria (Schrödinger) è simulata dal vivo; per la band c'è un registro reale a più qubit con accoppiamento di Ising.",
+      psib:"Stazione gemella: n_c_c_n, la ChaoticJazzStation (sistemi dinamici, caos e sonificazione)." },
+    en:{ back:'← station', back2:'← station', h1:'about / colophon',
+      p1:"qubit is a quantum sonification station, the sibling of n_c_c_n, but one where sound is born from quantum mechanics instead of deterministic chaos. In chaos the unpredictability is only apparent, because the equations are exact; here chance is real, since measuring a qubit is genuinely non-deterministic. With entanglement even the relation between voices becomes quantum.",
+      hRef:'References',
+      pr1:"B. Coecke, 'A Quantum Guitar', arXiv:2509.04526 (2025). Quantising a guitar's strings, a qubit per playable state, with a continuous transition between classical and quantum.",
+      pr2:"R.-B. Abdyssagin and B. Coecke, 'Quantum Concept Music Score from Quantum Picturalism', arXiv:2510.05391 (2025). Music notation from the ZX-calculus, measurement as the compositional core, the Z (green) and X (red) colours, the Bell-pair performance.",
+      hPipe:'Pipeline',
+      phtml:"HTML, Canvas and WebAudio, with no dependencies. Every instrument is a single self-contained file. Unitary (Schrödinger) evolution is simulated live; for the band there is a real multi-qubit register with Ising coupling.",
+      psib:"Sibling station: n_c_c_n, the ChaoticJazzStation (dynamical systems, chaos and sonification)." }
+  };
+  function apply(){ var s=S[LANG]||S.it;
+    document.querySelectorAll('[data-t]').forEach(function(n){ var k=n.getAttribute('data-t'); if(s[k]!=null) n.textContent=s[k]; });
+    document.getElementById('qlang').textContent=LANG==='it'?'EN':'IT'; document.documentElement.lang=LANG;
+  }
+  document.getElementById('qlang').addEventListener('click',function(){
+    LANG=LANG==='it'?'en':'it'; try{localStorage.setItem('qlang',LANG);}catch(e){} apply();
+  });
+  apply();
+})();
+</script>
+</body>
+</html>
