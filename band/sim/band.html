@@ -30,6 +30,9 @@
   .qhelp .tip{position:absolute;top:23px;right:-2px;width:236px;display:none;background:#0f0f18;border:1px solid var(--bd2);border-radius:6px;padding:9px 11px;color:var(--dim);font-size:11px;line-height:1.55;z-index:10;box-shadow:0 8px 24px rgba(0,0,0,.55);text-align:left;font-weight:400}
   .qhelp .tip b{color:var(--psi)}
   .qhelp:hover .tip{display:block}
+  .kh{position:relative;display:inline-block;margin:0 0 11px;color:var(--dim);font-size:11px;cursor:help;border:1px solid var(--bd2);border-radius:999px;padding:2px 10px}
+  .kh .khtip{position:absolute;top:23px;left:0;width:250px;display:none;background:#0f0f18;border:1px solid var(--bd2);border-radius:6px;padding:9px 11px;color:var(--dim);font-size:11px;line-height:1.7;z-index:10;box-shadow:0 8px 24px rgba(0,0,0,.55);text-align:left}
+  .kh:hover .khtip{display:block} .kh .khtip b{color:var(--psi)}
   .card h2{font:700 11px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--amber);margin:0 0 10px}
   .recrow{display:flex;gap:6px}
   .recrow select{flex:1}
@@ -103,11 +106,14 @@
       <button id="pause">⏸ Pausa</button>
       <button id="reset" data-t="reset">RESET |+⟩</button>
     </div>
+    <div class="kh">? <span data-t="keyhelpL">tasti</span><div class="khtip" data-t="keyhelp"></div></div>
     <button id="recaudiobtn" style="width:100%;margin-bottom:11px">● REC audio · m4a</button>
     <div class="card">
       <span class="qhelp">?<span class="tip" data-t="drumnote"></span></span>
       <h2 data-t="hdrum">batteria</h2>
       <button id="drumbtn" class="on" style="width:100%">batteria: ON</button>
+      <label data-t="lkit">kit percussioni</label>
+      <select id="drumkit"><option value="warm">bongo · conga (caldo)</option><option value="wood">legno · nacchere (secco)</option><option value="electro">electro</option></select>
       <label data-t="ldrumvol">volume batteria <span class="val" id="vdrumvol">0.9</span></label>
       <input type="range" id="drumvol" min="0" max="1.5" step="0.01" value="0.9">
       <button id="groovebtn" style="width:100%;margin-top:9px">groove: off</button>
@@ -232,7 +238,8 @@ var STR={
    wPure:"puro",wMixed:"misto",wMax:"max misto",rLeg:"sfera piena = stato puro · centro = massimo entanglement",
    tDrone:"continuo on/off (spento = solo le note della misura)",onlyNotes:"solo note",
    hrec:"registrazione",keysnote:"tasti: [1-4] misura una voce · [spazio] misura tutte · [b] cambia base · [j] +accoppiamento",
-   hdrum:"batteria",ldrumvol:"volume batteria",
+   hdrum:"batteria",ldrumvol:"volume batteria",lkit:"kit percussioni",keyhelpL:"tasti",
+   keyhelp:'<b>spazio</b> misura tutti · <b>1-4</b> misura una voce · <b>z/x/y</b> base · <b>b</b> cambia base · <b>j/k</b> accoppiamento · <b>d</b> batteria · <b>g</b> groove · <b>p</b> pausa · <b>n</b> solo note · <b>,/.</b> volume',
    drumnote:'La batteria nasce dai qubit: <b>hi-hat</b> a ogni passaggio del qubit per l\'equatore (il ritmo è la velocità di precessione), <b>cassa</b> quando la magnetizzazione totale &Sigma;&langle;Z&rangle; attraversa lo zero, <b>rullante</b> a ogni collasso da misura, <b>piatto</b> quando cresce l\'entanglement.',
    lview:"vista (per registrazione / live)",vwfull:"piena (con scritte)",vwsph:"solo sfere",vwmin:"essenziale (profili)"},
  en:{sub:"multi-qubit register · coupling",audio:"◉ Audio",reset:"RESET |+⟩",hfield:"field / coupling",
@@ -245,7 +252,8 @@ var STR={
    wPure:"pure",wMixed:"mixed",wMax:"max mixed",rLeg:"full sphere = pure state · centre = maximal entanglement",
    tDrone:"continuous on/off (off = only the measurement notes)",onlyNotes:"notes only",
    hrec:"recording",keysnote:"keys: [1-4] measure a voice · [space] measure all · [b] switch basis · [j] +coupling",
-   hdrum:"drums",ldrumvol:"drums volume",
+   hdrum:"drums",ldrumvol:"drums volume",lkit:"percussion kit",keyhelpL:"keys",
+   keyhelp:'<b>space</b> measure all · <b>1-4</b> measure a voice · <b>z/x/y</b> basis · <b>b</b> cycle basis · <b>j/k</b> coupling · <b>d</b> drums · <b>g</b> groove · <b>p</b> pause · <b>n</b> notes only · <b>,/.</b> volume',
    drumnote:'The drums come from the qubits: <b>hi-hat</b> on each equator crossing of a qubit (the rhythm is the precession rate), <b>kick</b> when the total magnetization &Sigma;&langle;Z&rangle; crosses zero, <b>snare</b> on each measurement collapse, <b>cymbal</b> when entanglement rises.',
    lview:"view (for recording / live)",vwfull:"full (with labels)",vwsph:"spheres only",vwmin:"minimal (profiles)"}
 };
@@ -356,7 +364,18 @@ function measureAll(){ for(var i=0;i<NQ;i++) measureQ(i,basis); }
 
 /* ---- audio ---- */
 var AC=null,master,haze,hazeGain,voices=[],started=false;
-var drumBus=null,noiseBuf=null,drumOn=true,drumVol=0.9,_dz=[0,0,0,0],_dm=0,_df=[0,0,0,0],_dv=0,_dInit=false,_lastHat=[0,0,0,0],_lastKick=0,_lastSnare=0,_lastCrash=0;
+var drumBus=null,noiseBuf=null,drumOn=true,drumVol=0.9,drumKit='warm',_dz=[0,0,0,0],_dm=0,_df=[0,0,0,0],_dv=0,_dInit=false,_lastHat=[0,0,0,0],_lastKick=0,_lastSnare=0,_lastCrash=0;
+// warm hand-percussion voices (bongo/conga/shaker) for the "warm" kit
+function membrane(f0,f1,v,dec){if(!drumBus)return;var t=AC.currentTime;var o=AC.createOscillator();o.type='sine';o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(f1,t+dec*0.5);
+  var o2=AC.createOscillator();o2.type='triangle';o2.frequency.setValueAtTime(f0*2,t);o2.frequency.exponentialRampToValueAtTime(f1*2,t+dec*0.4);var g2=AC.createGain();g2.gain.setValueAtTime(0.12*v,t);g2.gain.exponentialRampToValueAtTime(0.0006,t+dec*0.6);o2.connect(g2);g2.connect(drumBus);o2.start(t);o2.stop(t+dec);
+  var g=AC.createGain();g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.75*v,t+0.008);g.gain.exponentialRampToValueAtTime(0.0007,t+dec);o.connect(g);g.connect(drumBus);o.start(t);o.stop(t+dec+0.02);}
+function shaker(v,hz,dec){if(!drumBus)return;var t=AC.currentTime;var s=AC.createBufferSource();s.buffer=noiseBuf;var bp=AC.createBiquadFilter();bp.type='bandpass';bp.frequency.value=hz;bp.Q.value=0.8;
+  var g=AC.createGain();g.gain.setValueAtTime(Math.max(0.02,0.4*v),t);g.gain.exponentialRampToValueAtTime(0.0006,t+dec);s.connect(bp);bp.connect(g);g.connect(drumBus);s.start(t);s.stop(t+dec+0.02);}
+// dry "wood" voices: woodblock/clave (short pitched click) and castanets (two quick clicks)
+function woodblock(f,v,dec){if(!drumBus)return;var t=AC.currentTime;var o=AC.createOscillator();o.type='triangle';o.frequency.setValueAtTime(f,t);
+  var g=AC.createGain();g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.6*v,t+0.002);g.gain.exponentialRampToValueAtTime(0.0005,t+dec);o.connect(g);g.connect(drumBus);o.start(t);o.stop(t+dec+0.02);
+  var s=AC.createBufferSource();s.buffer=noiseBuf;var hp=AC.createBiquadFilter();hp.type='highpass';hp.frequency.value=3000;var ng=AC.createGain();ng.gain.setValueAtTime(0.3*v,t);ng.gain.exponentialRampToValueAtTime(0.0005,t+0.012);s.connect(hp);hp.connect(ng);ng.connect(drumBus);s.start(t);s.stop(t+0.02);}
+function castanet(v){if(!drumBus)return;var t=AC.currentTime;for(var c=0;c<2;c++){var s=AC.createBufferSource();s.buffer=noiseBuf;var bp=AC.createBiquadFilter();bp.type='bandpass';bp.frequency.value=4500;bp.Q.value=2;var g=AC.createGain();var tt=t+c*0.028;g.gain.setValueAtTime(0.35*v,tt);g.gain.exponentialRampToValueAtTime(0.0005,tt+0.02);s.connect(bp);bp.connect(g);g.connect(drumBus);s.start(tt);s.stop(tt+0.03);}}
 var grooveOn=false,_beat=0,_hph=0,_pump=1;   // groove: emergent-tempo beat grid + sidechain pump
 function makeNoise(){var len=AC.sampleRate*2,buf=AC.createBuffer(1,len,AC.sampleRate),d=buf.getChannelData(0);
   var lp=0;for(var i=0;i<len;i++){var w=Math.random()*2-1;lp=(lp*0.97)+(w*0.03);d[i]=lp*3;}var s=AC.createBufferSource();s.buffer=buf;s.loop=true;return s;}
@@ -395,20 +414,20 @@ function initAudio(){
    hi-hat = a qubit's <Z> crossing the equator (its rate IS the precession/Larmor freq; velocity ~ purity |r|),
    kick   = the total magnetization Σ<Z> crossing zero (the collective downbeat),
    snare  = a measurement collapse. Toggle with the "batteria" button. ---- */
-function kick(){if(!drumBus)return;var t=AC.currentTime;var o=AC.createOscillator(),g=AC.createGain();
+function kick(){if(!drumBus)return;if(drumKit==='warm'){membrane(115,54,1,0.30);return;}if(drumKit==='wood'){woodblock(95,1,0.14);return;}var t=AC.currentTime;var o=AC.createOscillator(),g=AC.createGain();
   o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(45,t+0.12);
   g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.9,t+0.006);g.gain.exponentialRampToValueAtTime(0.0008,t+0.22);
   o.connect(g);g.connect(drumBus);o.start(t);o.stop(t+0.24);}
-function hat(v){if(!drumBus)return;var t=AC.currentTime;var s=AC.createBufferSource();s.buffer=noiseBuf;
+function hat(v){if(!drumBus)return;if(drumKit==='warm'){shaker(v,6200,0.075);return;}if(drumKit==='wood'){woodblock(2200,v*0.5,0.022);return;}var t=AC.currentTime;var s=AC.createBufferSource();s.buffer=noiseBuf;
   var hp=AC.createBiquadFilter();hp.type='highpass';hp.frequency.value=7000;var g=AC.createGain();
   g.gain.setValueAtTime(Math.max(0.02,0.5*v),t);g.gain.exponentialRampToValueAtTime(0.0006,t+0.05);
   s.connect(hp);hp.connect(g);g.connect(drumBus);s.start(t);s.stop(t+0.06);}
-function snare(){if(!drumBus)return;var t=AC.currentTime;var s=AC.createBufferSource();s.buffer=noiseBuf;
+function snare(){if(!drumBus)return;if(drumKit==='warm'){membrane(230,155,0.9,0.19);shaker(0.5,3200,0.11);return;}if(drumKit==='wood'){castanet(0.85);woodblock(430,0.55,0.07);return;}var t=AC.currentTime;var s=AC.createBufferSource();s.buffer=noiseBuf;
   var bp=AC.createBiquadFilter();bp.type='bandpass';bp.frequency.value=1800;bp.Q.value=0.7;var g=AC.createGain();
   g.gain.setValueAtTime(0.7,t);g.gain.exponentialRampToValueAtTime(0.0008,t+0.18);s.connect(bp);bp.connect(g);g.connect(drumBus);s.start(t);s.stop(t+0.2);
   var o=AC.createOscillator();o.type='triangle';o.frequency.setValueAtTime(330,t);var g2=AC.createGain();
   g2.gain.setValueAtTime(0.25,t);g2.gain.exponentialRampToValueAtTime(0.0008,t+0.12);o.connect(g2);g2.connect(drumBus);o.start(t);o.stop(t+0.13);}
-function crash(){if(!drumBus)return;var t=AC.currentTime;var s=AC.createBufferSource();s.buffer=noiseBuf;s.loop=true;
+function crash(){if(!drumBus)return;if(drumKit==='warm'){shaker(0.7,7000,0.6);return;}if(drumKit==='wood'){shaker(0.6,7800,0.22);return;}var t=AC.currentTime;var s=AC.createBufferSource();s.buffer=noiseBuf;s.loop=true;
   var hp=AC.createBiquadFilter();hp.type='highpass';hp.frequency.value=5000;
   var pk=AC.createBiquadFilter();pk.type='bandpass';pk.frequency.value=9000;pk.Q.value=0.6;
   var g=AC.createGain();g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.5,t+0.01);g.gain.exponentialRampToValueAtTime(0.0006,t+0.7);
@@ -512,6 +531,7 @@ var paused=false;
     if(drumBus&&AC)drumBus.gain.setTargetAtTime(drumVol,AC.currentTime,0.03);}; }
   var gb=document.getElementById('groovebtn');
   if(gb){ gb.onclick=function(){grooveOn=!grooveOn;gb.classList.toggle('on',grooveOn);gb.textContent='groove: '+(grooveOn?'on':'off');_beat=0;_hph=0;_pump=1;}; }
+  var dk=document.getElementById('drumkit'); if(dk)dk.onchange=function(){drumKit=dk.value;};
 })();
 document.getElementById('reset').addEventListener('click',function(){initState();for(var i=0;i<4;i++)flash[i]=0;});
 document.getElementById('nq').addEventListener('change',function(){NQ=parseInt(this.value,10);initState();couplingPairs=computePairs();buildVoiceRows();});
@@ -567,6 +587,9 @@ window.addEventListener('keydown',function(e){var k=e.key.toLowerCase();
   if(k==='j'||k==='k'){var c=document.getElementById('coup');c.value=Math.max(0,Math.min(1,parseFloat(c.value)+(k==='j'?0.1:-0.1)));c.dispatchEvent(new Event('input'));return;}
   if(k===','||k==='.'){var vv=document.getElementById('vol');vv.value=Math.max(0,Math.min(1,parseFloat(vv.value)+(k==='.'?0.05:-0.05)));vv.dispatchEvent(new Event('input'));return;}
   if(k==='n'){document.getElementById('onlynotes').click();return;}
+  if(k==='d'){document.getElementById('drumbtn').click();return;}
+  if(k==='g'){document.getElementById('groovebtn').click();return;}
+  if(k==='p'){document.getElementById('pause').click();return;}
   if(/^[1-4]$/.test(k)){var i=parseInt(k,10)-1;if(i<NQ){if(!started)initAudio();measureQ(i,basis);}return;}
 });
 

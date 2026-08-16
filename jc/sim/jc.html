@@ -33,6 +33,9 @@
   .read{font:12px/1.7 var(--mono);color:var(--faint)} .read b{color:var(--psi)}
   .qnote{color:var(--faint);font-size:11px;line-height:1.5;margin-top:8px;border-left:2px solid var(--bd2);padding-left:8px}
   .qnote b{color:var(--psi)}
+  .kh{position:relative;display:inline-block;margin:0 0 11px;color:var(--dim);font-size:11px;cursor:help;border:1px solid var(--bd2);border-radius:999px;padding:2px 10px}
+  .kh .khtip{position:absolute;top:23px;left:0;width:240px;display:none;background:#0f0f18;border:1px solid var(--bd2);border-radius:6px;padding:9px 11px;color:var(--dim);font-size:11px;line-height:1.7;z-index:10;box-shadow:0 8px 24px rgba(0,0,0,.55);text-align:left}
+  .kh:hover .khtip{display:block} .kh .khtip b{color:var(--psi)}
   a.back{position:absolute;top:12px;left:12px;padding:7px 13px;background:rgba(20,20,40,.6);color:var(--dim);border:1px solid var(--bd);border-radius:999px;text-decoration:none;font-size:13px;z-index:4}
   a.back:hover{color:var(--ink)}
   #lang{position:absolute;top:12px;right:12px;padding:7px 14px;background:rgba(20,20,40,.6);color:var(--dim);border:1px solid var(--bd);border-radius:999px;cursor:pointer;font:inherit;font-size:13px;z-index:4}
@@ -56,6 +59,7 @@
       <button id="play" class="on" data-t="audio">◉ Audio</button>
       <button id="reset" data-t="reset">reset t=0</button>
     </div>
+    <div class="kh">? <span data-t="keyhelpL">tasti</span><div class="khtip" data-t="keyhelp"></div></div>
     <button id="recaudiobtn" style="width:100%;margin-bottom:11px">● REC audio · m4a</button>
     <div class="card">
       <h2 data-t="hfield">campo &amp; accoppiamento</h2>
@@ -103,7 +107,7 @@ var STR={
    hint:'▶ premi <b>Audio</b>: l\'atomo eccitato scambia un fotone con la cavità.<br>Le oscillazioni di Rabi collassano e poi <b>rinascono</b>.',
    atom:"atomo",cav:"cavità",inv:"inversione atomica W(t) = ⟨σ_z⟩ · collasso → rinascita",
    note:"l'accordo della cavità è la distribuzione dei fotoni; pulsa con la rinascita",
-   lspread:"granularità quantistica",
+   lspread:"granularità quantistica",keyhelpL:"tasti",keyhelp:'<b>spazio</b> Audio · <b>r</b> ritmo on/off',
    qexpl:'A <b>granularità 0</b> il campo ha un numero di fotoni definito: le oscillazioni di Rabi non collassano mai (limite quasi-classico). Alzandola, i diversi Ω<sub>n</sub> = 2g√(n+1) si sfasano → <b>collasso e rinascita</b>, effetto puramente quantistico.'},
  en:{sub:"atom + cavity · collapse and revival",audio:"◉ Audio",reset:"reset t=0",hfield:"field & coupling",
    lnbar:"mean photons n̄",lg:"coupling g",ldet:"detuning Δ",hsound:"sound",lwave:"timbre",lcut:"softness · lowpass",lspeed:"speed",lvol:"volume",lrhyvol:"rhythm volume",
@@ -111,7 +115,7 @@ var STR={
    hint:'▶ press <b>Audio</b>: the excited atom trades a photon with the cavity.<br>The Rabi oscillations collapse and then <b>revive</b>.',
    atom:"atom",cav:"cavity",inv:"atomic inversion W(t) = ⟨σ_z⟩ · collapse → revival",
    note:"the cavity chord is the photon distribution; it pulses with the revival",
-   lspread:"quantum granularity",
+   lspread:"quantum granularity",keyhelpL:"keys",keyhelp:'<b>space</b> Audio · <b>r</b> rhythm on/off',
    qexpl:'At <b>granularity 0</b> the field has a definite photon number: the Rabi oscillations never collapse (near-classical limit). Raising it, the different Ω<sub>n</sub> = 2g√(n+1) dephase → <b>collapse and revival</b>, a purely quantum effect.'}
 };
 function T(k){return (STR[LANG]&&STR[LANG][k]!=null)?STR[LANG][k]:STR.it[k];}
@@ -247,6 +251,8 @@ $('cut').oninput=function(){P.cut=parseFloat(this.value);$('vcut').textContent=M
       var url=URL.createObjectURL(bl),a=document.createElement('a');a.href=url;a.download='qusound-jc.'+ext;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},2000);
       b.textContent=DEF;b.classList.remove('on');};
     rec.start(200);b.textContent='■ STOP';b.classList.add('on');};})();
+addEventListener('keydown',function(e){var k=e.key.toLowerCase();var tg=(e.target&&e.target.tagName)||'';if(tg==='INPUT'||tg==='SELECT')return;
+  if(k==='r'){$('rhythmbtn').click();return;} if(k===' '){e.preventDefault();$('play').click();return;}});
 applyLang();resize();requestAnimationFrame(render);
 })();
 </script>

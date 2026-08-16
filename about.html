@@ -6,6 +6,12 @@
 <title>QuSound :: about</title>
 <link rel="stylesheet" href="assets/theme.css">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
+<style>
+  .keys-tbl{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px}
+  .keys-tbl td{padding:4px 8px;border-top:1px solid var(--bd);vertical-align:top}
+  .keys-tbl td:first-child{white-space:nowrap;width:120px}
+  kbd{display:inline-block;background:#151530;border:1px solid var(--bd2);border-radius:5px;padding:1px 6px;font:12px ui-monospace,Menlo,Consolas,monospace}
+</style>
 </head>
 <body>
 <main>
@@ -23,6 +29,8 @@
         <p data-t="pr1"></p>
         <p data-t="pr2"></p>
       </div>
+      <div class="h2" data-t="hKeys"></div>
+      <div id="keystable" class="prose"></div>
       <div class="h2" data-t="hPipe"></div>
       <div class="prose">
         <p data-t="phtml"></p>
@@ -41,6 +49,7 @@
       hRef:'Riferimenti',
       pr1:"B. Coecke, «A Quantum Guitar», arXiv:2509.04526 (2025). Quantizzare le corde di una chitarra, un qubit per stato suonabile, con transizione continua tra classico e quantistico.",
       pr2:"R.-B. Abdyssagin e B. Coecke, «Quantum Concept Music Score from Quantum Picturalism», arXiv:2510.05391 (2025). Notazione musicale dallo ZX-calculus, la misura come cuore compositivo, i colori Z (verde) e X (rosso), la performance della coppia di Bell.",
+      hKeys:'Scorciatoie da tastiera',
       hPipe:'Pipeline',
       phtml:"HTML, Canvas e WebAudio, senza dipendenze. Ogni strumento è un singolo file autosufficiente. L'evoluzione unitaria (Schrödinger) è simulata dal vivo; per la band c'è un registro reale a più qubit con accoppiamento di Ising.",
       psib:"Stazione gemella: n_c_c_n, la ChaoticJazzStation (sistemi dinamici, caos e sonificazione)." },
@@ -49,12 +58,46 @@
       hRef:'References',
       pr1:"B. Coecke, 'A Quantum Guitar', arXiv:2509.04526 (2025). Quantising a guitar's strings, a qubit per playable state, with a continuous transition between classical and quantum.",
       pr2:"R.-B. Abdyssagin and B. Coecke, 'Quantum Concept Music Score from Quantum Picturalism', arXiv:2510.05391 (2025). Music notation from the ZX-calculus, measurement as the compositional core, the Z (green) and X (red) colours, the Bell-pair performance.",
+      hKeys:'Keyboard shortcuts',
       hPipe:'Pipeline',
       phtml:"HTML, Canvas and WebAudio, with no dependencies. Every instrument is a single self-contained file. Unitary (Schrödinger) evolution is simulated live; for the band there is a real multi-qubit register with Ising coupling.",
       psib:"Sibling station: n_c_c_n, the ChaoticJazzStation (dynamical systems, chaos and sonification)." }
   };
+  var KEYS={
+    it:'<table class="keys-tbl">'+
+      '<tr><td colspan="2"><b>Strumenti (sito)</b></td></tr>'+
+      '<tr><td><kbd>spazio</kbd></td><td>Audio / azione principale (misura tutti · ricarica · pizzica…)</td></tr>'+
+      '<tr><td><kbd>1</kbd>–<kbd>4</kbd></td><td>misura una voce (Quantum Band)</td></tr>'+
+      '<tr><td><kbd>z</kbd> <kbd>x</kbd> <kbd>y</kbd></td><td>base di misura · <kbd>b</kbd> cicla la base</td></tr>'+
+      '<tr><td><kbd>d</kbd> · <kbd>g</kbd></td><td>batteria on/off · groove</td></tr>'+
+      '<tr><td><kbd>r</kbd></td><td>ritmo / percussione on/off</td></tr>'+
+      '<tr><td><kbd>a</kbd> · <kbd>0</kbd></td><td>pizzico automatico (Fononi) · reset / stato |0⟩</td></tr>'+
+      '<tr><td><kbd>p</kbd> · <kbd>,</kbd> <kbd>.</kbd></td><td>pausa · volume giù / su</td></tr>'+
+      '<tr><td colspan="2" style="padding-top:10px"><b>Console locale</b></td></tr>'+
+      '<tr><td><kbd>1</kbd>–<kbd>4</kbd> · <kbd>spazio</kbd></td><td>misura il qubit · misura tutti</td></tr>'+
+      '<tr><td><kbd>z</kbd> <kbd>x</kbd> <kbd>y</kbd> · <kbd>j</kbd> <kbd>k</kbd></td><td>base globale · accoppiamento</td></tr>'+
+      '<tr><td><kbd>b</kbd> · <kbd>g</kbd> · <kbd>a</kbd></td><td>batteria · groove · auto-misura tutti</td></tr>'+
+      '<tr><td><kbd>w</kbd> · <kbd>p</kbd></td><td>vista sfera / onda · proiettore</td></tr>'+
+      '</table>',
+    en:'<table class="keys-tbl">'+
+      '<tr><td colspan="2"><b>Instruments (site)</b></td></tr>'+
+      '<tr><td><kbd>space</kbd></td><td>Audio / main action (measure all · pump · pluck…)</td></tr>'+
+      '<tr><td><kbd>1</kbd>–<kbd>4</kbd></td><td>measure a voice (Quantum Band)</td></tr>'+
+      '<tr><td><kbd>z</kbd> <kbd>x</kbd> <kbd>y</kbd></td><td>measurement basis · <kbd>b</kbd> cycle basis</td></tr>'+
+      '<tr><td><kbd>d</kbd> · <kbd>g</kbd></td><td>drums on/off · groove</td></tr>'+
+      '<tr><td><kbd>r</kbd></td><td>rhythm / percussion on/off</td></tr>'+
+      '<tr><td><kbd>a</kbd> · <kbd>0</kbd></td><td>auto pluck (Phonons) · reset / state |0⟩</td></tr>'+
+      '<tr><td><kbd>p</kbd> · <kbd>,</kbd> <kbd>.</kbd></td><td>pause · volume down / up</td></tr>'+
+      '<tr><td colspan="2" style="padding-top:10px"><b>Local console</b></td></tr>'+
+      '<tr><td><kbd>1</kbd>–<kbd>4</kbd> · <kbd>space</kbd></td><td>measure the qubit · measure all</td></tr>'+
+      '<tr><td><kbd>z</kbd> <kbd>x</kbd> <kbd>y</kbd> · <kbd>j</kbd> <kbd>k</kbd></td><td>global basis · coupling</td></tr>'+
+      '<tr><td><kbd>b</kbd> · <kbd>g</kbd> · <kbd>a</kbd></td><td>drums · groove · auto-measure all</td></tr>'+
+      '<tr><td><kbd>w</kbd> · <kbd>p</kbd></td><td>Bloch sphere / wave view · projector</td></tr>'+
+      '</table>'
+  };
   function apply(){ var s=S[LANG]||S.it;
     document.querySelectorAll('[data-t]').forEach(function(n){ var k=n.getAttribute('data-t'); if(s[k]!=null) n.textContent=s[k]; });
+    document.getElementById('keystable').innerHTML=KEYS[LANG]||KEYS.it;
     document.getElementById('qlang').textContent=LANG==='it'?'EN':'IT'; document.documentElement.lang=LANG;
   }
   document.getElementById('qlang').addEventListener('click',function(){

@@ -63,7 +63,17 @@ window.PROJECTS = [
       "arpeggiano un'armonia coerente invece di saltare a caso.\n\n" +
       "La notazione a colori Z-verde / X-rosso e la centralità della misura provengono dal Quantum " +
       "Picturalism (ZX-calculus) e dalla musica quantistica di Coecke (vedi Bibliografia), dove le " +
-      "misure complementari sono lette come coppie di qualità musicali (piano/forte, lento/veloce).",
+      "misure complementari sono lette come coppie di qualità musicali (piano/forte, lento/veloce).\n\n" +
+      "ZX-CALCULUS, il minimo formale. Un diagramma ZX è fatto di due soli tipi di nodo (gli spider): " +
+      "lo spider VERDE (Z) e quello ROSSO (X), ciascuno con una fase α. Un ragno verde con fase 0 e una " +
+      "sola gamba è lo stato |0⟩ + |1⟩ (cioè |+⟩); uno rosso con fase 0 è |0⟩: i due colori sono " +
+      "semplicemente le due basi COMPLEMENTARI Z e X. Due regole bastano per quasi tutto: (1) FUSIONE, " +
+      "due spider adiacenti dello STESSO colore si fondono in uno solo sommando le fasi (α + β); " +
+      "(2) COMPLEMENTARITÀ, verde e rosso si scambiano attraversando una porta di Hadamard. Una MISURA " +
+      "è uno spider con una gamba che termina (un 'effetto' ⟨esito|), e il suo COLORE è la base scelta: " +
+      "verde = Z, rosso = X. È esattamente da qui che nascono il verde-Z / rosso-X e la centralità della " +
+      "misura in tutta la stazione. Nota onesta: qui lo ZX è usato come linguaggio e codice-colore; il " +
+      "calcolo sotto il cofano gira con ampiezze e matrici densità, non riscrivendo diagrammi.",
     math_en:
       "A qubit's state is a unit vector in the Hilbert space ℂ²: |ψ⟩ = α|0⟩ + β|1⟩ with α, β ∈ ℂ " +
       "and |α|² + |β|² = 1. Up to a physically irrelevant global phase it is written " +
@@ -86,7 +96,17 @@ window.PROJECTS = [
       "collapses arpeggiate a coherent harmony instead of jumping at random.\n\n" +
       "The Z-green / X-red colour notation and the centrality of measurement come from Quantum " +
       "Picturalism (the ZX-calculus) and Coecke's quantum music (see the Bibliography), where " +
-      "complementary measurements are read as pairs of musical qualities (soft/loud, slow/fast).",
+      "complementary measurements are read as pairs of musical qualities (soft/loud, slow/fast).\n\n" +
+      "ZX-CALCULUS, the formal minimum. A ZX diagram is built from just two kinds of node (spiders): " +
+      "the GREEN (Z) spider and the RED (X) spider, each carrying a phase α. A green spider with phase 0 " +
+      "and a single leg is the state |0⟩ + |1⟩ (that is |+⟩); a red one with phase 0 is |0⟩: the two " +
+      "colours are simply the two COMPLEMENTARY bases Z and X. Two rules do almost everything: " +
+      "(1) FUSION, two adjacent SAME-colour spiders merge into one, adding their phases (α + β); " +
+      "(2) COMPLEMENTARITY, green and red swap through a Hadamard gate. A MEASUREMENT is a spider whose " +
+      "leg ends (an 'effect' ⟨outcome|), and its COLOUR is the chosen basis: green = Z, red = X. This is " +
+      "exactly where the green-Z / red-X coding and the centrality of measurement across the station come " +
+      "from. Honest note: here ZX is used as a language and colour code; the computation under the hood " +
+      "runs on amplitudes and density matrices, not by rewriting diagrams.",
     sims: [
       { id:"synth", title:"Single Qubit Synth", title_en:"Single Qubit Synth", file:"sim/synth.html",
         desc:"La sfera che precede: melodia continua, synth regolabile, misura Z/X/Y con collasso armonico",

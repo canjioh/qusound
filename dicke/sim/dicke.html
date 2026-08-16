@@ -31,6 +31,9 @@
   .transport{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:11px}
   #play{background:linear-gradient(180deg,#3a3f47,#20242a);color:var(--amber);font-weight:700}
   .read{font:12px/1.7 var(--mono);color:var(--faint)} .read b{color:var(--psi)}
+  .kh{position:relative;display:inline-block;margin:0 0 11px;color:var(--dim);font-size:11px;cursor:help;border:1px solid var(--bd2);border-radius:999px;padding:2px 10px}
+  .kh .khtip{position:absolute;top:23px;left:0;width:230px;display:none;background:#0f0f18;border:1px solid var(--bd2);border-radius:6px;padding:9px 11px;color:var(--dim);font-size:11px;line-height:1.7;z-index:10;box-shadow:0 8px 24px rgba(0,0,0,.55);text-align:left}
+  .kh:hover .khtip{display:block} .kh .khtip b{color:var(--psi)}
   a.back{position:absolute;top:12px;left:12px;padding:7px 13px;background:rgba(20,20,40,.6);color:var(--dim);border:1px solid var(--bd);border-radius:999px;text-decoration:none;font-size:13px;z-index:4}
   a.back:hover{color:var(--ink)}
   #lang{position:absolute;top:12px;right:12px;padding:7px 14px;background:rgba(20,20,40,.6);color:var(--dim);border:1px solid var(--bd);border-radius:999px;cursor:pointer;font:inherit;font-size:13px;z-index:4}
@@ -54,6 +57,7 @@
       <button id="play" class="on" data-t="audio">◉ Audio</button>
       <button id="pump" data-t="pump">ricarica ora</button>
     </div>
+    <div class="kh">? <span data-t="keyhelpL">tasti</span><div class="khtip" data-t="keyhelp"></div></div>
     <button id="recaudiobtn" style="width:100%;margin-bottom:11px">● REC audio · m4a</button>
     <div class="card">
       <h2 data-t="hens">ensemble</h2>
@@ -93,13 +97,13 @@ var STR={
    back:"← spiegazione del modello",
    hint:'▶ premi <b>Audio</b>. N atomi eccitati emettono <b>insieme</b>: un lampo ritardato e intenso (∝ N²).',
    inv:"inversione collettiva W(t)",intens:"intensità di emissione I(t) — il lampo superradiante",
-   charge:"carica",flash:"LAMPO",peak:"picco",delay:"ritardo",lrhyvol:"volume ritmo"},
+   charge:"carica",flash:"LAMPO",peak:"picco",delay:"ritardo",lrhyvol:"volume ritmo",keyhelpL:"tasti",keyhelp:'<b>spazio</b> ricarica · <b>r</b> ritmo on/off'},
  en:{sub:"N atoms in one cavity · collective flash",audio:"◉ Audio",pump:"pump now",hens:"ensemble",
    lN:"number of atoms N",lg:"coupling g",lpump:"auto re-pump",hsound:"sound",lspeed:"speed",lvol:"volume",
    back:"← model explanation",
    hint:'▶ press <b>Audio</b>. N excited atoms emit <b>together</b>: a delayed, intense flash (∝ N²).',
    inv:"collective inversion W(t)",intens:"emission intensity I(t) — the superradiant flash",
-   charge:"charge",flash:"FLASH",peak:"peak",delay:"delay",lrhyvol:"rhythm volume"}
+   charge:"charge",flash:"FLASH",peak:"peak",delay:"delay",lrhyvol:"rhythm volume",keyhelpL:"keys",keyhelp:'<b>space</b> pump · <b>r</b> rhythm on/off'}
 };
 function T(k){return (STR[LANG]&&STR[LANG][k]!=null)?STR[LANG][k]:STR.it[k];}
 function applyLang(){document.querySelectorAll('[data-t]').forEach(function(n){var k=n.getAttribute('data-t');if(STR[LANG][k]==null)return;
@@ -224,6 +228,8 @@ rng('N','vN','N',null);rng('g','vg','g',2);rng('pumprate','vpump','pumprate',2);
       var url=URL.createObjectURL(bl),a=document.createElement('a');a.href=url;a.download='qusound-dicke.'+ext;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},2000);
       b.textContent=DEF;b.classList.remove('on');};
     rec.start(200);b.textContent='■ STOP';b.classList.add('on');};})();
+addEventListener('keydown',function(e){var k=e.key.toLowerCase();var tg=(e.target&&e.target.tagName)||'';if(tg==='INPUT'||tg==='SELECT')return;
+  if(k==='r'){$('rhythmbtn').click();return;} if(k===' '){e.preventDefault();if(!started)$('play').click();else $('pump').click();return;}});
 applyLang();resize();requestAnimationFrame(render);
 })();
 </script>

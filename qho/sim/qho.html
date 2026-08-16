@@ -27,6 +27,9 @@
   .fock label{color:var(--psi)}
   .qnote{color:var(--faint);font-size:11px;line-height:1.5;margin:8px 0;border-left:2px solid var(--bd2);padding-left:8px}
   .qnote b{color:var(--psi)}
+  .kh{position:relative;display:inline-block;margin:0 0 11px;color:var(--dim);font-size:11px;cursor:help;border:1px solid var(--bd2);border-radius:999px;padding:2px 10px}
+  .kh .khtip{position:absolute;top:23px;left:0;width:240px;display:none;background:#0f0f18;border:1px solid var(--bd2);border-radius:6px;padding:9px 11px;color:var(--dim);font-size:11px;line-height:1.7;z-index:10;box-shadow:0 8px 24px rgba(0,0,0,.55);text-align:left}
+  .kh:hover .khtip{display:block} .kh .khtip b{color:var(--psi)}
   button{padding:8px 4px;background:#151530;color:var(--ink);border:1px solid var(--bd2);border-radius:9px;cursor:pointer;font:inherit;font-size:12px}
   button:hover{background:#1d1d40}
   #recaudiobtn.on{color:var(--x);border-color:var(--x)}
@@ -58,6 +61,7 @@
       <button id="play" class="on" data-t="audio">◉ Audio</button>
       <button id="ground" data-t="ground">stato |0⟩</button>
     </div>
+    <div class="kh">? <span data-t="keyhelpL">tasti</span><div class="khtip" data-t="keyhelp"></div></div>
     <button id="recaudiobtn" style="width:100%;margin-bottom:11px">● REC audio · m4a</button>
     <div class="card">
       <h2 data-t="hstate">stato = Σ cₙ|n⟩</h2>
@@ -102,13 +106,13 @@
 var LANG=(function(){try{return localStorage.getItem('qlang')||'it';}catch(e){return 'it';}})();
 var STR={
  it:{sub:"stati di Fock, coerenti · n quanti = n-esima armonica",audio:"◉ Audio",ground:"stato |0⟩",hstate:"stato = Σ cₙ|n⟩",
-   lalpha:"α · stato coerente (classicità)",
+   lalpha:"α · stato coerente (classicità)",keyhelpL:"tasti",keyhelp:'<b>spazio</b> Audio · <b>r</b> ritmo on/off · <b>0</b> stato |0⟩',
    qexpl:'Uno <b>stato coerente</b> (α grande) è ciò che più assomiglia a un oscillatore <b>classico</b>: il pacchetto oscilla rigido come una massa su una molla. Con <b>pochi quanti</b> emerge la discretizzazione: un singolo autostato di energia è <b>stazionario</b> e quindi <b>muto</b> — impossibile per un oscillatore classico, che con energia si muove sempre.',
    pcoh:"coerente",hsound:"suono",lwave:"timbro",lcut:"morbidezza · lowpass",lom:"frequenza ω (fondamentale)",lspeed:"velocità",lvol:"volume",lrhyvol:"volume ritmo",back:"← spiegazione del modello",
    hint:'▶ premi <b>Audio</b>. Un singolo autostato |n⟩ è <b>muto</b> (stazionario):<br>solo una <b>sovrapposizione</b> di energie diverse batte nel tempo e produce suono.',
    wavelabel:"|ψ(x,t)|²  ·  ⟨x⟩ oscilla a ω",silent:"stato fondamentale: fermo e muto",superp:"sovrapposizione: batte a multipli di ω → armoniche"},
  en:{sub:"Fock & coherent states · n quanta = n-th harmonic",audio:"◉ Audio",ground:"state |0⟩",hstate:"state = Σ cₙ|n⟩",
-   lalpha:"α · coherent state (classicality)",
+   lalpha:"α · coherent state (classicality)",keyhelpL:"keys",keyhelp:'<b>space</b> Audio · <b>r</b> rhythm on/off · <b>0</b> state |0⟩',
    qexpl:'A <b>coherent state</b> (large α) is the closest thing to a <b>classical</b> oscillator: the packet swings rigidly like a mass on a spring. With <b>few quanta</b> the discreteness emerges: a single energy eigenstate is <b>stationary</b> and therefore <b>silent</b> — impossible for a classical oscillator, which always moves when it has energy.',
    pcoh:"coherent",hsound:"sound",lwave:"timbre",lcut:"softness · lowpass",lom:"frequency ω (fundamental)",lspeed:"speed",lvol:"volume",lrhyvol:"rhythm volume",back:"← model explanation",
    hint:'▶ press <b>Audio</b>. A single eigenstate |n⟩ is <b>silent</b> (stationary):<br>only a <b>superposition</b> of different energies beats in time and makes sound.',
@@ -245,6 +249,8 @@ $('cut').oninput=function(){P.cut=parseFloat(this.value);$('vcut').textContent=M
       var url=URL.createObjectURL(bl),a=document.createElement('a');a.href=url;a.download='qusound-qho.'+ext;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},2000);
       b.textContent=DEF;b.classList.remove('on');};
     rec.start(200);b.textContent='■ STOP';b.classList.add('on');};})();
+addEventListener('keydown',function(e){var k=e.key.toLowerCase();var tg=(e.target&&e.target.tagName)||'';if(tg==='INPUT'||tg==='SELECT')return;
+  if(k==='r'){$('rhythmbtn').click();return;} if(k==='0'){$('ground').click();return;} if(k===' '){e.preventDefault();$('play').click();return;}});
 applyLang();resize();requestAnimationFrame(render);
 })();
 </script>
