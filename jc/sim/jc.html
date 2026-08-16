@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jaynes–Cummings · qubit</title>
+<style>
+  :root{color-scheme:dark;
+    --bg:#0b0c0e;--panel:rgba(255,255,255,.028);--bd:#2a2e35;--bd2:#3a3f47;
+    --ink:#d9dce2;--dim:#8b9098;--faint:#565b64;--amber:#ffb000;--z:#46d17f;--x:#ff5a4f;--psi:#5cc6ff;
+    --sans:ui-monospace,"SF Mono",Menlo,Consolas,monospace;--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:13px/1.5 var(--sans);overflow:hidden}
+  #app{display:flex;height:100%}
+  #panel{width:312px;flex:0 0 312px;padding:16px;overflow-y:auto;background:linear-gradient(180deg,rgba(20,22,26,.92),rgba(14,15,18,.92));border-right:1px solid var(--bd)}
+  #stage{flex:1;position:relative;min-width:0}
+  canvas{display:block;width:100%;height:100%}
+  h1{font-size:15px;margin:0 0 2px;font-weight:650}
+  .sub{color:var(--faint);font-size:12px;margin:0 0 14px}
+  .beta{display:inline-block;margin-left:7px;padding:1px 7px;border:1px solid var(--amber);border-radius:999px;color:var(--amber);font:700 9px/1.5 var(--mono);letter-spacing:.16em;text-transform:uppercase;vertical-align:middle}
+  .card{background:var(--panel);border:1px solid var(--bd);border-radius:5px;padding:12px;margin-bottom:11px}
+  .card h2{font:700 11px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--amber);margin:0 0 10px}
+  label{display:block;margin:9px 0 3px;color:var(--dim);font-size:12px}
+  label:first-of-type{margin-top:0}
+  .val{float:right;color:var(--ink);font-family:var(--mono);font-size:11px}
+  input[type=range]{width:100%;accent-color:var(--amber);height:20px}
+  button{padding:8px 4px;background:#151530;color:var(--ink);border:1px solid var(--bd2);border-radius:9px;cursor:pointer;font:inherit;font-size:12px}
+  button:hover{background:#1d1d40}
+  #recaudiobtn.on{color:var(--x);border-color:var(--x)}
+  #rhythmbtn.on{color:var(--z);border-color:var(--z)}
+  .transport{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:11px}
+  #play{background:linear-gradient(180deg,#3a3f47,#20242a);color:var(--amber);font-weight:700}
+  .read{font:12px/1.7 var(--mono);color:var(--faint)} .read b{color:var(--psi)}
+  .qnote{color:var(--faint);font-size:11px;line-height:1.5;margin-top:8px;border-left:2px solid var(--bd2);padding-left:8px}
+  .qnote b{color:var(--psi)}
+  a.back{position:absolute;top:12px;left:12px;padding:7px 13px;background:rgba(20,20,40,.6);color:var(--dim);border:1px solid var(--bd);border-radius:999px;text-decoration:none;font-size:13px;z-index:4}
+  a.back:hover{color:var(--ink)}
+  #lang{position:absolute;top:12px;right:12px;padding:7px 14px;background:rgba(20,20,40,.6);color:var(--dim);border:1px solid var(--bd);border-radius:999px;cursor:pointer;font:inherit;font-size:13px;z-index:4}
+  #hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--dim);font-size:15px;pointer-events:none;padding:24px}
+  @media (max-width:760px){
+    html,body{overflow:auto}
+    #app{flex-direction:column;height:auto;min-height:100%}
+    #stage{order:1;width:100%;height:58vh;min-height:340px;flex:none}
+    #panel{order:2;width:100%;flex:none;border-right:none;border-top:1px solid var(--bd);padding:14px 16px 40px}
+    input[type=range]{height:28px}
+  }
+</style>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20fill='%2308080f'/%3E%3Ccircle%20cx='10'%20cy='16'%20r='4'%20fill='%23ffb000'/%3E%3Ccircle%20cx='22'%20cy='16'%20r='6'%20fill='none'%20stroke='%235cc6ff'%20stroke-width='2'/%3E%3C/svg%3E">
+</head>
+<body>
+<div id="app">
+  <div id="panel">
+    <h1 id="h1">Jaynes–Cummings <span class="beta">beta</span></h1>
+    <p class="sub" data-t="sub">atomo + cavità · collasso e rinascita</p>
+    <div class="transport">
+      <button id="play" class="on" data-t="audio">◉ Audio</button>
+      <button id="reset" data-t="reset">reset t=0</button>
+    </div>
+    <button id="recaudiobtn" style="width:100%;margin-bottom:11px">● REC audio · m4a</button>
+    <div class="card">
+      <h2 data-t="hfield">campo &amp; accoppiamento</h2>
+      <label data-t="lnbar">fotoni medi n̄ <span class="val" id="vnbar">8.0</span></label>
+      <input type="range" id="nbar" min="0.5" max="30" step="0.1" value="8">
+      <label data-t="lg">accoppiamento g <span class="val" id="vg">1.00</span></label>
+      <input type="range" id="g" min="0.2" max="2" step="0.01" value="1">
+      <label data-t="ldet">detuning Δ <span class="val" id="vdet">0.0</span></label>
+      <input type="range" id="det" min="-6" max="6" step="0.1" value="0">
+      <label data-t="lspread">granularità quantistica <span class="val" id="vspread">1.00</span></label>
+      <input type="range" id="spread" min="0" max="1" step="0.01" value="1">
+      <div class="qnote" data-t="qexpl"></div>
+    </div>
+    <div class="card">
+      <h2 data-t="hsound">suono</h2>
+      <label data-t="lwave">timbro</label>
+      <select id="wave"><option value="sine">sine</option><option value="triangle" selected>triangle</option><option value="sawtooth">saw</option><option value="square">square</option></select>
+      <label data-t="lcut">morbidezza · lowpass <span class="val" id="vcut">1400</span></label>
+      <input type="range" id="cut" min="300" max="6000" step="10" value="1400">
+      <label data-t="lspeed">velocità <span class="val" id="vspeed">0.45</span></label>
+      <input type="range" id="speed" min="0" max="1" step="0.01" value="0.45">
+      <label data-t="lvol">volume <span class="val" id="vvol">0.7</span></label>
+      <input type="range" id="vol" min="0" max="1" step="0.01" value="0.7">
+      <button id="rhythmbtn" style="width:100%;margin-top:8px">ritmo: off</button>
+      <label data-t="lrhyvol">volume ritmo <span class="val" id="vrhyvol">0.80</span></label>
+      <input type="range" id="rhyvol" min="0" max="1.5" step="0.01" value="0.8">
+    </div>
+    <div class="card"><div class="read" id="readout"></div></div>
+  </div>
+  <div id="stage">
+    <a class="back" href="../" data-t="back">← spiegazione del modello</a>
+    <button id="lang">EN</button>
+    <canvas id="cv"></canvas>
+    <div id="hint"><span data-t="hint">▶ premi <b>Audio</b>: l'atomo eccitato scambia un fotone con la cavità.<br>Le oscillazioni di Rabi collassano e poi <b>rinascono</b>.</span></div>
+  </div>
+</div>
+<script>
+(function(){
+"use strict";
+var LANG=(function(){try{return localStorage.getItem('qlang')||'it';}catch(e){return 'it';}})();
+var STR={
+ it:{sub:"atomo + cavità · collasso e rinascita",audio:"◉ Audio",reset:"reset t=0",hfield:"campo & accoppiamento",
+   lnbar:"fotoni medi n̄",lg:"accoppiamento g",ldet:"detuning Δ",hsound:"suono",lwave:"timbro",lcut:"morbidezza · lowpass",lspeed:"velocità",lvol:"volume",lrhyvol:"volume ritmo",
+   back:"← spiegazione del modello",
+   hint:'▶ premi <b>Audio</b>: l\'atomo eccitato scambia un fotone con la cavità.<br>Le oscillazioni di Rabi collassano e poi <b>rinascono</b>.',
+   atom:"atomo",cav:"cavità",inv:"inversione atomica W(t) = ⟨σ_z⟩ · collasso → rinascita",
+   note:"l'accordo della cavità è la distribuzione dei fotoni; pulsa con la rinascita",
+   lspread:"granularità quantistica",
+   qexpl:'A <b>granularità 0</b> il campo ha un numero di fotoni definito: le oscillazioni di Rabi non collassano mai (limite quasi-classico). Alzandola, i diversi Ω<sub>n</sub> = 2g√(n+1) si sfasano → <b>collasso e rinascita</b>, effetto puramente quantistico.'},
+ en:{sub:"atom + cavity · collapse and revival",audio:"◉ Audio",reset:"reset t=0",hfield:"field & coupling",
+   lnbar:"mean photons n̄",lg:"coupling g",ldet:"detuning Δ",hsound:"sound",lwave:"timbre",lcut:"softness · lowpass",lspeed:"speed",lvol:"volume",lrhyvol:"rhythm volume",
+   back:"← model explanation",
+   hint:'▶ press <b>Audio</b>: the excited atom trades a photon with the cavity.<br>The Rabi oscillations collapse and then <b>revive</b>.',
+   atom:"atom",cav:"cavity",inv:"atomic inversion W(t) = ⟨σ_z⟩ · collapse → revival",
+   note:"the cavity chord is the photon distribution; it pulses with the revival",
+   lspread:"quantum granularity",
+   qexpl:'At <b>granularity 0</b> the field has a definite photon number: the Rabi oscillations never collapse (near-classical limit). Raising it, the different Ω<sub>n</sub> = 2g√(n+1) dephase → <b>collapse and revival</b>, a purely quantum effect.'}
+};
+function T(k){return (STR[LANG]&&STR[LANG][k]!=null)?STR[LANG][k]:STR.it[k];}
+function applyLang(){document.querySelectorAll('[data-t]').forEach(function(n){var k=n.getAttribute('data-t');if(STR[LANG][k]==null)return;
+  var v=n.querySelector('.val');if(v){n.textContent=STR[LANG][k]+' ';n.appendChild(v);}else{n.innerHTML=STR[LANG][k];}});
+  document.getElementById('lang').textContent=LANG==='it'?'EN':'IT';document.documentElement.lang=LANG;if(window.__rhyLab)window.__rhyLab();}
+document.getElementById('lang').addEventListener('click',function(){LANG=LANG==='it'?'en':'it';try{localStorage.setItem('qlang',LANG);}catch(e){}applyLang();});
+
+var P={nbar:8,g:1,det:0,speed:0.45,vol:0.7,wave:'triangle',cut:1400,spread:1};
+var t=0, NMAX=40, Pn=[], hist=[], _pePrev=0, _lastPulse=0;
+// photon-number distribution of CONTROLLABLE width: σ = spread·√n̄.
+// spread→0 : a sharp number state -> single Rabi frequency -> NO collapse (classical-like field);
+// spread=1 : full coherent spread (σ=√n̄) -> the Ωₙ dephase -> collapse & revival (quantum).
+function dist(){var nb=P.nbar, sig=Math.max(0.06,P.spread*Math.sqrt(nb+1)); NMAX=Math.max(8,Math.ceil(nb+5*sig+8)); Pn=[]; var sum=0;
+  for(var n=0;n<=NMAX;n++){var d=(n-nb)/sig; Pn[n]=Math.exp(-0.5*d*d); sum+=Pn[n];}
+  for(var k=0;k<=NMAX;k++)Pn[k]/=sum;}
+dist();
+function Pe(tt){var g=P.g,D=P.det,s=0;
+  for(var n=0;n<=NMAX;n++){var R2=D*D+4*g*g*(n+1);var sn=Math.sin(Math.sqrt(R2)*tt/2);
+    s+=Pn[n]*(1-(4*g*g*(n+1)/R2)*sn*sn);}return s;}
+
+/* ---- HARMONIOUS audio: the cavity sings the coherent state as a pentatonic chord
+   (voice j is the photon number near n̄, its loudness = P_n), pulsing with the field
+   envelope (1-Pe). The atom adds a lead following the excited population Pe. ---- */
+var AC=null,master,toneLP,started=false,chord=[],atomLead,atomG,NV=7;
+var percBus=null,percNoise=null,percOn=false,percVol=0.8;
+function tom(f,v){if(!percBus)return;var t=AC.currentTime;var o=AC.createOscillator();o.type='sine';o.frequency.setValueAtTime(f*1.7,t);o.frequency.exponentialRampToValueAtTime(f,t+0.05);
+  var g=AC.createGain();g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.55*v,t+0.005);g.gain.exponentialRampToValueAtTime(0.0006,t+0.2);
+  o.connect(g);g.connect(percBus);o.start(t);o.stop(t+0.22);
+  var s=AC.createBufferSource();s.buffer=percNoise;var hp=AC.createBiquadFilter();hp.type='highpass';hp.frequency.value=1600;var ng=AC.createGain();ng.gain.setValueAtTime(0.2*v,t);ng.gain.exponentialRampToValueAtTime(0.0006,t+0.03);s.connect(hp);hp.connect(ng);ng.connect(percBus);s.start(t);s.stop(t+0.04);}
+var SCALE=[0,2,4,7,9], ROOT=130.81;                        // C3 major pentatonic
+function scaleFreq(deg){var o=Math.floor(deg/5),i=((deg%5)+5)%5;return ROOT*Math.pow(2,o)*Math.pow(2,SCALE[i]/12);}
+function initAudio(){ if(started)return;
+  AC=new (window.AudioContext||window.webkitAudioContext)();
+  master=AC.createGain();master.gain.value=P.vol;
+  var comp=AC.createDynamicsCompressor();comp.threshold.value=-16;comp.ratio.value=4;
+  var lim=AC.createDynamicsCompressor();lim.threshold.value=-1.5;lim.knee.value=0;lim.ratio.value=20;lim.attack.value=0.002;lim.release.value=0.12;
+  toneLP=AC.createBiquadFilter();toneLP.type='lowpass';toneLP.frequency.value=P.cut;toneLP.Q.value=0.5;
+  master.connect(toneLP);toneLP.connect(comp);comp.connect(lim);lim.connect(AC.destination);
+  percBus=AC.createGain();percBus.gain.value=percVol;percBus.connect(comp);   // percussion bypasses the tone lowpass
+  percNoise=AC.createBuffer(1,Math.floor(AC.sampleRate*0.2),AC.sampleRate);var _pd=percNoise.getChannelData(0);for(var _pi=0;_pi<_pd.length;_pi++)_pd[_pi]=Math.random()*2-1;
+  chord=[];for(var j=0;j<NV;j++){var o=AC.createOscillator();o.type=P.wave;o.frequency.value=scaleFreq(j);
+    var g=AC.createGain();g.gain.value=0;o.connect(g);g.connect(master);o.start();chord.push({o:o,g:g,deg:j});}
+  atomLead=AC.createOscillator();atomLead.type='triangle';atomLead.frequency.value=scaleFreq(NV+3);
+  atomG=AC.createGain();atomG.gain.value=0;atomLead.connect(atomG);atomG.connect(master);atomLead.start();
+  started=true;document.getElementById('hint').style.display='none';document.getElementById('play').classList.remove('on');
+}
+// a bright ping on each Rabi peak -> you HEAR the oscillations collapse (pings thin out) and revive (pings return)
+function pulse(){if(!AC)return;var tc=AC.currentTime;var o=AC.createOscillator();o.type='triangle';o.frequency.value=scaleFreq(NV+2);
+  var o2=AC.createOscillator();o2.type='sine';o2.frequency.value=scaleFreq(NV+2)*2;
+  var g=AC.createGain();g.gain.setValueAtTime(0.0001,tc);g.gain.exponentialRampToValueAtTime(0.2,tc+0.006);g.gain.exponentialRampToValueAtTime(0.0006,tc+0.34);
+  o.connect(g);o2.connect(g);g.connect(master);o.start(tc);o2.start(tc);o.stop(tc+0.38);o2.stop(tc+0.38);}
+function updateAudio(pe){ if(!started)return;var tc=AC.currentTime;
+  master.gain.setTargetAtTime(P.vol,tc,0.05);
+  var field=1-pe;                                          // photon held in the cavity
+  var n0=Math.max(0,Math.round(P.nbar)-3), pmax=1e-6, w=[];
+  for(var j=0;j<NV;j++){var pnj=Pn[n0+j]||0;w[j]=pnj;if(pnj>pmax)pmax=pnj;}
+  for(var k=0;k<NV;k++){chord[k].g.gain.setTargetAtTime(0.34*(w[k]/pmax)*(0.25+0.75*field),tc,0.05);}
+  atomG.gain.setTargetAtTime(0.22*pe,tc,0.04);             // atom lead follows the excited population
+}
+
+/* ---- canvas: better laid-out panels ---- */
+var cv=document.getElementById('cv'),ctx=cv.getContext('2d'),W=0,H2=0,DPR=1;
+function resize(){var r=cv.getBoundingClientRect();W=r.width;H2=r.height;DPR=Math.min(window.devicePixelRatio||1,2);
+  cv.width=Math.round(W*DPR)&~1;cv.height=Math.round(H2*DPR)&~1;ctx.setTransform(DPR,0,0,DPR,0,0);}
+addEventListener('resize',resize);
+function txt(s,x,y,col,f){ctx.fillStyle=col;ctx.font=(f||'12px')+' var(--mono)';ctx.fillText(s,x,y);}
+var last=performance.now();
+function render(now){var dt=Math.min(0.05,(now-last)/1000);last=now;
+  t+=dt*P.speed*6;
+  var pe=Pe(t), Wv=2*pe-1, nph=P.nbar+1-pe;
+  hist.push(Wv); var maxh=Math.max(120,Math.floor(W)); if(hist.length>maxh)hist.shift();
+  updateAudio(pe);
+  if(started && _pePrev<0.72 && pe>=0.72 && (AC.currentTime-_lastPulse)>0.09){ pulse(); if(percOn)tom(120,0.9); _lastPulse=AC.currentTime; }
+  _pePrev=pe;
+  ctx.clearRect(0,0,W,H2);
+  var pad=Math.max(18,W*0.04), colW=(W-pad*3)/2;
+  // ===== TOP-LEFT: the two-level atom =====
+  var ax=pad+colW*0.30, aeY=H2*0.13, agY=H2*0.34, aw=colW*0.5;
+  ctx.strokeStyle='rgba(160,168,220,.5)';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(ax-aw/2,aeY);ctx.lineTo(ax+aw/2,aeY);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(ax-aw/2,agY);ctx.lineTo(ax+aw/2,agY);ctx.stroke();
+  txt('|e⟩',ax+aw/2+8,aeY+4,'rgba(160,168,220,.75)');txt('|g⟩',ax+aw/2+8,agY+4,'rgba(160,168,220,.75)');
+  var dy=agY+(aeY-agY)*pe;
+  ctx.shadowColor='#ffb000';ctx.shadowBlur=8+22*pe;ctx.fillStyle='#ffb000';ctx.beginPath();ctx.arc(ax,dy,8,0,7);ctx.fill();ctx.shadowBlur=0;
+  txt(T('atom')+' · Pₑ='+pe.toFixed(2),pad,agY+34,'rgba(255,176,0,.85)');
+  // ===== TOP-RIGHT: the cavity, pulsing rings ~ photon field =====
+  var fx=pad*2+colW+colW*0.5, fy=H2*0.22, field=1-pe;
+  for(var rr=0;rr<3;rr++){var rad=colW*0.12*(1+rr*0.55)+Math.sin(t*0.7+rr)*4;
+    ctx.strokeStyle='rgba(92,198,255,'+(0.12+0.5*field*(1-rr*0.25)).toFixed(3)+')';ctx.lineWidth=2.4;
+    ctx.beginPath();ctx.arc(fx,fy,rad,0,7);ctx.stroke();}
+  txt(T('cav')+' · ⟨n⟩='+nph.toFixed(2),pad*2+colW,H2*0.40,'rgba(92,198,255,.85)');
+  // ===== MIDDLE: inversion W(t) plot with collapse-revival =====
+  var y0=H2*0.60, amp=H2*0.15;
+  ctx.strokeStyle='rgba(120,130,160,.25)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad,y0);ctx.lineTo(W-pad,y0);ctx.stroke();
+  ctx.strokeStyle='#5cc6ff';ctx.lineWidth=2.2;ctx.shadowColor='#5cc6ff';ctx.shadowBlur=6;ctx.beginPath();
+  for(var i=0;i<hist.length;i++){var xx=pad+(W-2*pad)*i/Math.max(1,hist.length-1),yy=y0-hist[i]*amp;if(i===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);}
+  ctx.stroke();ctx.shadowBlur=0;
+  txt(T('inv'),pad,y0-amp-10,'rgba(160,168,200,.75)');
+  // ===== BOTTOM: photon-number distribution P_n (the cavity chord) =====
+  var by=H2*0.94, bh=H2*0.16, nShow=Math.min(NMAX,Math.max(14,Math.ceil(P.nbar*2))), bw=(W-2*pad)/(nShow+1), pmx=0,n2;
+  for(n2=0;n2<=nShow;n2++)if(Pn[n2]>pmx)pmx=Pn[n2];
+  var n0=Math.max(0,Math.round(P.nbar)-3);
+  for(n2=0;n2<=nShow;n2++){var bx=pad+n2*bw, hh=(Pn[n2]/pmx)*bh, inChord=(n2>=n0&&n2<n0+NV);
+    ctx.fillStyle=inChord?'rgba(255,176,0,.75)':'rgba(92,198,255,.35)';
+    ctx.fillRect(bx,by-hh,bw*0.7,hh);}
+  txt('P(n) · '+T('note'),pad,by-bh-8,'rgba(160,168,200,.55)','11px');
+  document.getElementById('readout').innerHTML='n̄=<b>'+P.nbar.toFixed(1)+'</b> · g=<b>'+P.g.toFixed(2)+'</b> · Δ=<b>'+P.det.toFixed(1)+'</b><br>Pₑ=<b>'+pe.toFixed(3)+'</b> · ⟨n⟩=<b>'+nph.toFixed(2)+'</b> · t=<b>'+t.toFixed(1)+'</b>';
+  requestAnimationFrame(render);
+}
+
+function $(id){return document.getElementById(id);}
+$('play').onclick=function(){if(!started)initAudio();else if(AC.state==='suspended')AC.resume();};
+$('reset').onclick=function(){t=0;hist.length=0;};
+function rng(id,vid,key,dec){var s=$(id);s.oninput=function(){var v=parseFloat(s.value);P[key]=v;$(vid).textContent=dec!=null?v.toFixed(dec):Math.round(v);
+  if(key==='nbar'||key==='spread')dist();if(key==='vol'&&master)master.gain.setTargetAtTime(v,AC.currentTime,0.03);};}
+rng('nbar','vnbar','nbar',1);rng('g','vg','g',2);rng('det','vdet','det',1);rng('spread','vspread','spread',2);rng('speed','vspeed','speed',2);rng('vol','vvol','vol',1);
+$('wave').onchange=function(){P.wave=this.value;for(var i=0;i<chord.length;i++)chord[i].o.type=P.wave;};
+$('cut').oninput=function(){P.cut=parseFloat(this.value);$('vcut').textContent=Math.round(P.cut);if(toneLP)toneLP.frequency.setTargetAtTime(P.cut,AC.currentTime,0.03);};
+(function(){var rb=$('rhythmbtn');if(rb){function lab(){rb.textContent=(LANG==='it'?'ritmo: ':'rhythm: ')+(percOn?'on':'off');}
+  rb.onclick=function(){percOn=!percOn;rb.classList.toggle('on',percOn);lab();};window.__rhyLab=lab;lab();}
+  var rv=$('rhyvol');if(rv)rv.oninput=function(){percVol=parseFloat(rv.value);$('vrhyvol').textContent=percVol.toFixed(2);if(percBus&&AC)percBus.gain.setTargetAtTime(percVol,AC.currentTime,0.03);};})();
+/* ---- REC AUDIO (m4a / AAC, fallback webm-opus) ---- */
+(function(){var b=$('recaudiobtn');if(!b)return;var rec=null,chunks=[],dest=null,DEF='● REC audio · m4a';
+  function rmime(){var L=['audio/mp4;codecs=mp4a.40.2','audio/mp4','audio/webm;codecs=opus','audio/webm'];for(var i=0;i<L.length;i++){try{if(window.MediaRecorder&&MediaRecorder.isTypeSupported(L[i]))return L[i];}catch(e){}}return '';}
+  b.onclick=function(){ if(rec&&rec.state!=='inactive'){rec.stop();return;}
+    if(!started||!AC){alert(LANG==='it'?'Premi prima Audio':'Press Audio first');return;}
+    if(!dest){dest=AC.createMediaStreamDestination();master.connect(dest);}
+    var m=rmime();if(!m){alert(LANG==='it'?'Registrazione non supportata':'Recording not supported');return;}
+    try{rec=new MediaRecorder(dest.stream,{mimeType:m,audioBitsPerSecond:192000});}catch(e){try{rec=new MediaRecorder(dest.stream);}catch(e2){alert('no rec');return;}}
+    chunks=[];rec.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data);};
+    rec.onstop=function(){var ty=rec.mimeType||m,bl=new Blob(chunks,{type:ty}),ext=ty.indexOf('mp4')>=0?'m4a':'webm';
+      var url=URL.createObjectURL(bl),a=document.createElement('a');a.href=url;a.download='qusound-jc.'+ext;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},2000);
+      b.textContent=DEF;b.classList.remove('on');};
+    rec.start(200);b.textContent='■ STOP';b.classList.add('on');};})();
+applyLang();resize();requestAnimationFrame(render);
+})();
+</script>
+</body>
+</html>

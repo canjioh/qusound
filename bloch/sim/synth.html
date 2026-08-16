@@ -39,6 +39,7 @@
   input[type=range]{width:100%;accent-color:var(--violet);height:20px}
   select{width:100%;padding:6px;background:#121226;color:var(--ink);border:1px solid var(--bd2);border-radius:8px;font:inherit;font-size:13px}
   button{padding:8px 4px;background:#151530;color:var(--ink);border:1px solid var(--bd2);border-radius:9px;cursor:pointer;font:inherit;font-size:12px;transition:.12s}
+  #recaudiobtn.on{color:var(--x);border-color:var(--x)}
   button:hover{background:#1d1d40;border-color:#3a3a66}
   .gates{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
   .gates button{font-weight:700}
@@ -90,6 +91,7 @@
       <button id="pause">⏸ Pausa</button>
       <button id="prep0">RESET |0⟩</button>
     </div>
+    <button id="recaudiobtn" style="width:100%;margin-bottom:11px">● REC audio · m4a</button>
 
     <div class="card">
       <h2 data-t="hfield">campo / evoluzione</h2>
@@ -642,6 +644,19 @@ function drawReadout(){var z=n[2];var theta=Math.acos(Math.max(-1,Math.min(1,z))
   };
 })();
 
+/* ---- REC AUDIO (m4a / AAC, fallback webm-opus) ---- */
+(function(){var b=document.getElementById('recaudiobtn');if(!b)return;var rec=null,chunks=[],dest=null,DEF='● REC audio · m4a';
+  function rmime(){var L=['audio/mp4;codecs=mp4a.40.2','audio/mp4','audio/webm;codecs=opus','audio/webm'];for(var i=0;i<L.length;i++){try{if(window.MediaRecorder&&MediaRecorder.isTypeSupported(L[i]))return L[i];}catch(e){}}return '';}
+  b.onclick=function(){ if(rec&&rec.state!=='inactive'){rec.stop();return;}
+    if(!started||!AC){alert(LANG==='it'?'Premi prima Audio':'Press Audio first');return;}
+    if(!dest){dest=AC.createMediaStreamDestination();master.connect(dest);}
+    var m=rmime();if(!m){alert(LANG==='it'?'Registrazione non supportata':'Recording not supported');return;}
+    try{rec=new MediaRecorder(dest.stream,{mimeType:m,audioBitsPerSecond:192000});}catch(e){try{rec=new MediaRecorder(dest.stream);}catch(e2){alert('no rec');return;}}
+    chunks=[];rec.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data);};
+    rec.onstop=function(){var ty=rec.mimeType||m,bl=new Blob(chunks,{type:ty}),ext=ty.indexOf('mp4')>=0?'m4a':'webm';
+      var url=URL.createObjectURL(bl),a=document.createElement('a');a.href=url;a.download='qusound-single.'+ext;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},2000);
+      b.textContent=DEF;b.classList.remove('on');};
+    rec.start(200);b.textContent='■ STOP';b.classList.add('on');};})();
 applyLang();resize();requestAnimationFrame(render);
 })();
 </script>

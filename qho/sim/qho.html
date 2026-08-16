@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Oscillatore Armonico · qubit</title>
+<style>
+  :root{color-scheme:dark;
+    --bg:#0b0c0e;--panel:rgba(255,255,255,.028);--bd:#2a2e35;--bd2:#3a3f47;
+    --ink:#d9dce2;--dim:#8b9098;--faint:#565b64;--amber:#ffb000;--z:#46d17f;--x:#ff5a4f;--psi:#5cc6ff;
+    --sans:ui-monospace,"SF Mono",Menlo,Consolas,monospace;--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:13px/1.5 var(--sans);overflow:hidden}
+  #app{display:flex;height:100%}
+  #panel{width:312px;flex:0 0 312px;padding:16px;overflow-y:auto;background:linear-gradient(180deg,rgba(20,22,26,.92),rgba(14,15,18,.92));border-right:1px solid var(--bd)}
+  #stage{flex:1;position:relative;min-width:0}
+  canvas{display:block;width:100%;height:100%}
+  h1{font-size:15px;margin:0 0 2px;font-weight:650}
+  .sub{color:var(--faint);font-size:12px;margin:0 0 14px}
+  .beta{display:inline-block;margin-left:7px;padding:1px 7px;border:1px solid var(--amber);border-radius:999px;color:var(--amber);font:700 9px/1.5 var(--mono);letter-spacing:.16em;text-transform:uppercase;vertical-align:middle}
+  .card{background:var(--panel);border:1px solid var(--bd);border-radius:5px;padding:12px;margin-bottom:11px}
+  .card h2{font:700 11px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--amber);margin:0 0 10px}
+  label{display:block;margin:8px 0 3px;color:var(--dim);font-size:12px}
+  label:first-of-type{margin-top:0}
+  .val{float:right;color:var(--ink);font-family:var(--mono);font-size:11px}
+  input[type=range]{width:100%;accent-color:var(--amber);height:18px}
+  .fock label{color:var(--psi)}
+  .qnote{color:var(--faint);font-size:11px;line-height:1.5;margin:8px 0;border-left:2px solid var(--bd2);padding-left:8px}
+  .qnote b{color:var(--psi)}
+  button{padding:8px 4px;background:#151530;color:var(--ink);border:1px solid var(--bd2);border-radius:9px;cursor:pointer;font:inherit;font-size:12px}
+  button:hover{background:#1d1d40}
+  #recaudiobtn.on{color:var(--x);border-color:var(--x)}
+  #rhythmbtn.on{color:var(--z);border-color:var(--z)}
+  .transport{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:11px}
+  .presets{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px}
+  #play{background:linear-gradient(180deg,#3a3f47,#20242a);color:var(--amber);font-weight:700}
+  .read{font:12px/1.7 var(--mono);color:var(--faint)} .read b{color:var(--psi)}
+  a.back{position:absolute;top:12px;left:12px;padding:7px 13px;background:rgba(20,20,40,.6);color:var(--dim);border:1px solid var(--bd);border-radius:999px;text-decoration:none;font-size:13px;z-index:4}
+  a.back:hover{color:var(--ink)}
+  #lang{position:absolute;top:12px;right:12px;padding:7px 14px;background:rgba(20,20,40,.6);color:var(--dim);border:1px solid var(--bd);border-radius:999px;cursor:pointer;font:inherit;font-size:13px;z-index:4}
+  #hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--dim);font-size:15px;pointer-events:none;padding:24px}
+  @media (max-width:760px){
+    html,body{overflow:auto}
+    #app{flex-direction:column;height:auto;min-height:100%}
+    #stage{order:1;width:100%;height:56vh;min-height:320px;flex:none}
+    #panel{order:2;width:100%;flex:none;border-right:none;border-top:1px solid var(--bd);padding:14px 16px 40px}
+    input[type=range]{height:26px}
+  }
+</style>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20fill='%2308080f'/%3E%3Cpath%20d='M2%2028%20Q16%20-6%2030%2028'%20fill='none'%20stroke='%23334'%20stroke-width='1.5'/%3E%3Cpath%20d='M6%2020%20Q16%2010%2026%2020'%20fill='none'%20stroke='%23ffb000'%20stroke-width='2'/%3E%3C/svg%3E">
+</head>
+<body>
+<div id="app">
+  <div id="panel">
+    <h1>Oscillatore Armonico <span class="beta">beta</span></h1>
+    <p class="sub" data-t="sub">stati di Fock, coerenti · n quanti = n-esima armonica</p>
+    <div class="transport">
+      <button id="play" class="on" data-t="audio">◉ Audio</button>
+      <button id="ground" data-t="ground">stato |0⟩</button>
+    </div>
+    <button id="recaudiobtn" style="width:100%;margin-bottom:11px">● REC audio · m4a</button>
+    <div class="card">
+      <h2 data-t="hstate">stato = Σ cₙ|n⟩</h2>
+      <div class="presets">
+        <button id="pcoh" data-t="pcoh">coerente</button>
+        <button id="p12">|0⟩+|1⟩</button>
+        <button id="p03">|0⟩+|3⟩</button>
+      </div>
+      <label data-t="lalpha">α · stato coerente (classicità) <span class="val" id="valpha">0.00</span></label>
+      <input type="range" id="alpha" min="0" max="2.2" step="0.01" value="0">
+      <div class="qnote" data-t="qexpl"></div>
+      <div class="fock" id="fockrows"></div>
+    </div>
+    <div class="card">
+      <h2 data-t="hsound">suono</h2>
+      <label data-t="lwave">timbro</label>
+      <select id="wave"><option value="sine" selected>sine</option><option value="triangle">triangle</option><option value="sawtooth">saw</option><option value="square">square</option></select>
+      <label data-t="lcut">morbidezza · lowpass <span class="val" id="vcut">2200</span></label>
+      <input type="range" id="cut" min="300" max="7000" step="10" value="2200">
+      <label data-t="lom">frequenza ω (fondamentale) <span class="val" id="vom">1.00</span></label>
+      <input type="range" id="om" min="0.5" max="2" step="0.01" value="1">
+      <label data-t="lspeed">velocità <span class="val" id="vspeed">0.5</span></label>
+      <input type="range" id="speed" min="0" max="1" step="0.01" value="0.5">
+      <label data-t="lvol">volume <span class="val" id="vvol">0.7</span></label>
+      <input type="range" id="vol" min="0" max="1" step="0.01" value="0.7">
+      <button id="rhythmbtn" style="width:100%;margin-top:8px">ritmo: off</button>
+      <label data-t="lrhyvol">volume ritmo <span class="val" id="vrhyvol">0.80</span></label>
+      <input type="range" id="rhyvol" min="0" max="1.5" step="0.01" value="0.8">
+    </div>
+    <div class="card"><div class="read" id="readout"></div></div>
+  </div>
+  <div id="stage">
+    <a class="back" href="../" data-t="back">← spiegazione del modello</a>
+    <button id="lang">EN</button>
+    <canvas id="cv"></canvas>
+    <div id="hint"><span data-t="hint">▶ premi <b>Audio</b>. Un singolo autostato |n⟩ è <b>muto</b> (stazionario):<br>solo una <b>sovrapposizione</b> di energie diverse batte nel tempo e produce suono.</span></div>
+  </div>
+</div>
+<script>
+(function(){
+"use strict";
+var LANG=(function(){try{return localStorage.getItem('qlang')||'it';}catch(e){return 'it';}})();
+var STR={
+ it:{sub:"stati di Fock, coerenti · n quanti = n-esima armonica",audio:"◉ Audio",ground:"stato |0⟩",hstate:"stato = Σ cₙ|n⟩",
+   lalpha:"α · stato coerente (classicità)",
+   qexpl:'Uno <b>stato coerente</b> (α grande) è ciò che più assomiglia a un oscillatore <b>classico</b>: il pacchetto oscilla rigido come una massa su una molla. Con <b>pochi quanti</b> emerge la discretizzazione: un singolo autostato di energia è <b>stazionario</b> e quindi <b>muto</b> — impossibile per un oscillatore classico, che con energia si muove sempre.',
+   pcoh:"coerente",hsound:"suono",lwave:"timbro",lcut:"morbidezza · lowpass",lom:"frequenza ω (fondamentale)",lspeed:"velocità",lvol:"volume",lrhyvol:"volume ritmo",back:"← spiegazione del modello",
+   hint:'▶ premi <b>Audio</b>. Un singolo autostato |n⟩ è <b>muto</b> (stazionario):<br>solo una <b>sovrapposizione</b> di energie diverse batte nel tempo e produce suono.',
+   wavelabel:"|ψ(x,t)|²  ·  ⟨x⟩ oscilla a ω",silent:"stato fondamentale: fermo e muto",superp:"sovrapposizione: batte a multipli di ω → armoniche"},
+ en:{sub:"Fock & coherent states · n quanta = n-th harmonic",audio:"◉ Audio",ground:"state |0⟩",hstate:"state = Σ cₙ|n⟩",
+   lalpha:"α · coherent state (classicality)",
+   qexpl:'A <b>coherent state</b> (large α) is the closest thing to a <b>classical</b> oscillator: the packet swings rigidly like a mass on a spring. With <b>few quanta</b> the discreteness emerges: a single energy eigenstate is <b>stationary</b> and therefore <b>silent</b> — impossible for a classical oscillator, which always moves when it has energy.',
+   pcoh:"coherent",hsound:"sound",lwave:"timbre",lcut:"softness · lowpass",lom:"frequency ω (fundamental)",lspeed:"speed",lvol:"volume",lrhyvol:"rhythm volume",back:"← model explanation",
+   hint:'▶ press <b>Audio</b>. A single eigenstate |n⟩ is <b>silent</b> (stationary):<br>only a <b>superposition</b> of different energies beats in time and makes sound.',
+   wavelabel:"|ψ(x,t)|²  ·  ⟨x⟩ oscillates at ω",silent:"ground state: still and silent",superp:"superposition: beats at multiples of ω → harmonics"}
+};
+function T(k){return (STR[LANG]&&STR[LANG][k]!=null)?STR[LANG][k]:STR.it[k];}
+function applyLang(){document.querySelectorAll('[data-t]').forEach(function(n){var k=n.getAttribute('data-t');if(STR[LANG][k]==null)return;
+  var v=n.querySelector('.val');if(v){n.textContent=STR[LANG][k]+' ';n.appendChild(v);}else{n.innerHTML=STR[LANG][k];}});
+  document.getElementById('lang').textContent=LANG==='it'?'EN':'IT';document.documentElement.lang=LANG;if(window.__rhyLab)window.__rhyLab();}
+document.getElementById('lang').addEventListener('click',function(){LANG=LANG==='it'?'en':'it';try{localStorage.setItem('qlang',LANG);}catch(e){}applyLang();});
+var NF=6;                                  // Fock states n = 0..5
+var amp=[1,0,0,0,0,0];                      // |c_n| (unnormalised); phases assumed 0
+var P={om:1,speed:0.5,vol:0.7,wave:'sine',cut:2200};
+var tt=0;
+function norm(){var s=0,i;for(i=0;i<NF;i++)s+=amp[i]*amp[i];s=Math.sqrt(s)||1;for(i=0;i<NF;i++)amp[i]/=s;}
+norm();
+
+/* ---- audio: additive bank at k·f0. Harmonic k amplitude = 2 Σ_n |c_n||c_{n+k}|
+   (the density's Fourier component at the Bohr frequency (E_{n+k}-E_n)/ħ = kω).
+   A single Fock state -> all zero -> silence, exactly as the physics demands. ---- */
+var AC=null,master,toneLP,started=false,harm=[];
+var percBus=null,percNoise=null,percOn=false,percVol=0.8,_mxPrev=0;
+function bongo(f,v){if(!percBus)return;var t=AC.currentTime;var o=AC.createOscillator();o.type='sine';o.frequency.setValueAtTime(f*1.6,t);o.frequency.exponentialRampToValueAtTime(f,t+0.04);
+  var g=AC.createGain();g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.5*v,t+0.005);g.gain.exponentialRampToValueAtTime(0.0006,t+0.18);
+  o.connect(g);g.connect(percBus);o.start(t);o.stop(t+0.2);
+  var s=AC.createBufferSource();s.buffer=percNoise;var hp=AC.createBiquadFilter();hp.type='highpass';hp.frequency.value=1800;var ng=AC.createGain();ng.gain.setValueAtTime(0.22*v,t);ng.gain.exponentialRampToValueAtTime(0.0006,t+0.03);s.connect(hp);hp.connect(ng);ng.connect(percBus);s.start(t);s.stop(t+0.04);}
+function initAudio(){ if(started)return;
+  AC=new (window.AudioContext||window.webkitAudioContext)();
+  master=AC.createGain();master.gain.value=P.vol;
+  var lim=AC.createDynamicsCompressor();lim.threshold.value=-1.5;lim.knee.value=0;lim.ratio.value=20;lim.attack.value=0.002;lim.release.value=0.12;
+  toneLP=AC.createBiquadFilter();toneLP.type='lowpass';toneLP.frequency.value=P.cut;toneLP.Q.value=0.5;
+  master.connect(toneLP);toneLP.connect(lim);lim.connect(AC.destination);
+  percBus=AC.createGain();percBus.gain.value=percVol;percBus.connect(lim);   // percussion bypasses the tone lowpass
+  percNoise=AC.createBuffer(1,Math.floor(AC.sampleRate*0.2),AC.sampleRate);var _pd=percNoise.getChannelData(0);for(var _pi=0;_pi<_pd.length;_pi++)_pd[_pi]=Math.random()*2-1;
+  harm=[];for(var k=1;k<NF;k++){var o=AC.createOscillator();o.type=P.wave;
+    var g=AC.createGain();g.gain.value=0;var pan=AC.createStereoPanner?AC.createStereoPanner():null;
+    o.connect(g); if(pan){g.connect(pan);pan.connect(master);} else g.connect(master); o.start();
+    harm.push({o:o,g:g,pan:pan,k:k}); }
+  started=true;document.getElementById('hint').style.display='none';document.getElementById('play').classList.remove('on');
+  updateAudio();
+}
+function f0(){return 110*P.om;}            // fundamental in Hz
+function beatAmp(k){var s=0;for(var n=0;n+k<NF;n++)s+=amp[n]*amp[n+k];return 2*s;}
+function updateAudio(){ if(!started)return;var tc=AC.currentTime;
+  master.gain.setTargetAtTime(P.vol,tc,0.05);
+  for(var i=0;i<harm.length;i++){var h=harm[i];
+    h.o.frequency.setTargetAtTime(f0()*h.k,tc,0.04);
+    h.g.gain.setTargetAtTime(0.32*beatAmp(h.k),tc,0.05); } }
+
+/* ---- Hermite functions on a grid ---- */
+var XL=4.6, NG=140, xs=[]; (function(){for(var i=0;i<=NG;i++)xs.push(-XL+2*XL*i/NG);})();
+function phiAt(x){var ph=[],p0=Math.pow(Math.PI,-0.25)*Math.exp(-x*x/2);ph[0]=p0;
+  if(NF>1)ph[1]=Math.SQRT2*x*p0;
+  for(var n=2;n<NF;n++)ph[n]=Math.sqrt(2/n)*x*ph[n-1]-Math.sqrt((n-1)/n)*ph[n-2];
+  return ph;}
+
+/* ---- canvas ---- */
+var cv=document.getElementById('cv'),ctx=cv.getContext('2d'),W=0,H2=0,DPR=1;
+function resize(){var r=cv.getBoundingClientRect();W=r.width;H2=r.height;DPR=Math.min(window.devicePixelRatio||1,2);
+  cv.width=Math.round(W*DPR)&~1;cv.height=Math.round(H2*DPR)&~1;ctx.setTransform(DPR,0,0,DPR,0,0);}
+addEventListener('resize',resize);
+var last=performance.now();
+function render(now){var dt=Math.min(0.05,(now-last)/1000);last=now;
+  tt+=dt*P.speed*3*P.om;
+  ctx.clearRect(0,0,W,H2);
+  var midY=H2*0.60, sx=W/(2*XL), x2p=function(x){return W/2+x*sx;};
+  // potential parabola
+  ctx.strokeStyle='rgba(120,130,160,.35)';ctx.lineWidth=1.4;ctx.beginPath();
+  for(var i=0;i<=NG;i++){var x=xs[i],vy=midY-0.5*x*x* (H2*0.033);if(i===0)ctx.moveTo(x2p(x),vy);else ctx.lineTo(x2p(x),vy);}ctx.stroke();
+  // energy levels, brightness ~ population |c_n|^2
+  for(var n=0;n<NF;n++){var E=(n+0.5), ly=midY-E*(H2*0.066);
+    ctx.strokeStyle='rgba(92,198,255,'+(0.12+0.7*amp[n]*amp[n]).toFixed(3)+')';ctx.lineWidth=1.4;
+    ctx.beginPath();ctx.moveTo(W/2-Math.sqrt(2*E)*sx,ly);ctx.lineTo(W/2+Math.sqrt(2*E)*sx,ly);ctx.stroke();}
+  // density |psi(x,t)|^2 and <x>
+  var yb=H2*0.90, hgt=H2*0.42, dens=[],mx=1e-6,xm=0,nrm=0;
+  for(var j=0;j<=NG;j++){var ph=phiAt(xs[j]),re=0,im=0;
+    for(var m=0;m<NF;m++){var thm=-(m+0.5)*tt;re+=amp[m]*ph[m]*Math.cos(thm);im+=amp[m]*ph[m]*Math.sin(thm);}
+    var d=re*re+im*im;dens.push(d);if(d>mx)mx=d;xm+=xs[j]*d;nrm+=d;}
+  var meanx=nrm>0?xm/nrm:0;
+  if(percOn&&started&&_mxPrev*meanx<0&&Math.abs(meanx-_mxPrev)>0.015){ bongo(meanx>_mxPrev?150:112,0.9); }   // bongo each time the packet crosses the centre
+  _mxPrev=meanx;
+  ctx.beginPath();ctx.moveTo(x2p(xs[0]),yb);
+  for(var k2=0;k2<=NG;k2++)ctx.lineTo(x2p(xs[k2]),yb-(dens[k2]/mx)*hgt);
+  ctx.lineTo(x2p(xs[NG]),yb);ctx.closePath();
+  var g=ctx.createLinearGradient(0,yb,0,yb-hgt);g.addColorStop(0,'rgba(255,176,0,.10)');g.addColorStop(1,'rgba(255,176,0,.45)');
+  ctx.fillStyle=g;ctx.fill();
+  ctx.strokeStyle='#ffb000';ctx.lineWidth=2.4;ctx.shadowColor='#ffb000';ctx.shadowBlur=8;ctx.beginPath();
+  for(var k3=0;k3<=NG;k3++){var xx=x2p(xs[k3]),yy=yb-(dens[k3]/mx)*hgt;if(k3===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);}
+  ctx.stroke();ctx.shadowBlur=0;
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x2p(meanx),yb+6,4,0,7);ctx.fill();   // <x>(t)
+  ctx.fillStyle='rgba(160,168,200,.7)';ctx.font='12px var(--mono)';
+  ctx.fillText(T('wavelabel'),12,H2*0.12);
+  var spread=0;for(var q=0;q<NF;q++)spread+=(q!==0?amp[q]*amp[q]:0);
+  document.getElementById('readout').innerHTML='ω=<b>'+P.om.toFixed(2)+'</b> · f₀=<b>'+Math.round(110*P.om)+'</b> Hz<br>⟨x⟩=<b>'+meanx.toFixed(2)+'</b><br><span style="color:var(--faint)">'+(spread<1e-4?T('silent'):T('superp'))+'</span>';
+  requestAnimationFrame(render);
+}
+
+/* ---- UI ---- */
+function $(id){return document.getElementById(id);}
+// build Fock sliders
+(function(){var host=$('fockrows');for(var n=0;n<NF;n++){(function(n){
+  var wrap=document.createElement('div');
+  wrap.innerHTML='<label>c<sub>'+n+'</sub> = |'+n+'⟩ <span class="val" id="vc'+n+'">'+amp[n].toFixed(2)+'</span></label>'+
+    '<input type="range" id="c'+n+'" min="0" max="1" step="0.01" value="'+amp[n]+'">';
+  host.appendChild(wrap);
+})(n);} })();
+function refreshSliders(){for(var n=0;n<NF;n++){$('c'+n).value=amp[n];$('vc'+n).textContent=amp[n].toFixed(2);}}
+for(var n=0;n<NF;n++){(function(n){$('c'+n).oninput=function(){amp[n]=parseFloat(this.value);norm();refreshSliders();updateAudio();};})(n);}
+$('play').onclick=function(){if(!started)initAudio();else if(AC.state==='suspended')AC.resume();};
+$('ground').onclick=function(){amp=[1,0,0,0,0,0];norm();refreshSliders();updateAudio();};
+$('pcoh').onclick=function(){var al=1.4;$('alpha').value=al;$('valpha').textContent=al.toFixed(2);for(var i=0;i<NF;i++)amp[i]=Math.exp(-al*al/2)*Math.pow(al,i)/Math.sqrt(fact(i));norm();refreshSliders();updateAudio();};
+$('alpha').oninput=function(){var al=parseFloat(this.value);$('valpha').textContent=al.toFixed(2);for(var i=0;i<NF;i++)amp[i]=Math.exp(-al*al/2)*Math.pow(al,i)/Math.sqrt(fact(i));norm();refreshSliders();updateAudio();};
+$('p12').onclick=function(){amp=[1,1,0,0,0,0];norm();refreshSliders();updateAudio();};
+$('p03').onclick=function(){amp=[1,0,0,1,0,0];norm();refreshSliders();updateAudio();};
+function fact(n){var f=1;for(var i=2;i<=n;i++)f*=i;return f;}
+function rng(id,vid,key,dec){var s=$(id);s.oninput=function(){var v=parseFloat(s.value);P[key]=v;$(vid).textContent=v.toFixed(dec);
+  if(key==='vol'&&master)master.gain.setTargetAtTime(v,AC.currentTime,0.03); if(key==='om')updateAudio();};}
+rng('om','vom','om',2);rng('speed','vspeed','speed',1);rng('vol','vvol','vol',1);
+$('wave').onchange=function(){P.wave=this.value;for(var i=0;i<harm.length;i++)harm[i].o.type=P.wave;};
+$('cut').oninput=function(){P.cut=parseFloat(this.value);$('vcut').textContent=Math.round(P.cut);if(toneLP)toneLP.frequency.setTargetAtTime(P.cut,AC.currentTime,0.03);};
+(function(){var rb=$('rhythmbtn');if(rb){function lab(){rb.textContent=(LANG==='it'?'ritmo: ':'rhythm: ')+(percOn?'on':'off');}
+  rb.onclick=function(){percOn=!percOn;rb.classList.toggle('on',percOn);lab();};window.__rhyLab=lab;lab();}
+  var rv=$('rhyvol');if(rv)rv.oninput=function(){percVol=parseFloat(rv.value);$('vrhyvol').textContent=percVol.toFixed(2);if(percBus&&AC)percBus.gain.setTargetAtTime(percVol,AC.currentTime,0.03);};})();
+/* ---- REC AUDIO (m4a / AAC, fallback webm-opus) ---- */
+(function(){var b=$('recaudiobtn');if(!b)return;var rec=null,chunks=[],dest=null,DEF='● REC audio · m4a';
+  function rmime(){var L=['audio/mp4;codecs=mp4a.40.2','audio/mp4','audio/webm;codecs=opus','audio/webm'];for(var i=0;i<L.length;i++){try{if(window.MediaRecorder&&MediaRecorder.isTypeSupported(L[i]))return L[i];}catch(e){}}return '';}
+  b.onclick=function(){ if(rec&&rec.state!=='inactive'){rec.stop();return;}
+    if(!started||!AC){alert(LANG==='it'?'Premi prima Audio':'Press Audio first');return;}
+    if(!dest){dest=AC.createMediaStreamDestination();master.connect(dest);}
+    var m=rmime();if(!m){alert(LANG==='it'?'Registrazione non supportata':'Recording not supported');return;}
+    try{rec=new MediaRecorder(dest.stream,{mimeType:m,audioBitsPerSecond:192000});}catch(e){try{rec=new MediaRecorder(dest.stream);}catch(e2){alert('no rec');return;}}
+    chunks=[];rec.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data);};
+    rec.onstop=function(){var ty=rec.mimeType||m,bl=new Blob(chunks,{type:ty}),ext=ty.indexOf('mp4')>=0?'m4a':'webm';
+      var url=URL.createObjectURL(bl),a=document.createElement('a');a.href=url;a.download='qusound-qho.'+ext;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},2000);
+      b.textContent=DEF;b.classList.remove('on');};
+    rec.start(200);b.textContent='■ STOP';b.classList.add('on');};})();
+applyLang();resize();requestAnimationFrame(render);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dicke · Superradianza · qubit</title>
+<style>
+  :root{color-scheme:dark;
+    --bg:#0b0c0e;--panel:rgba(255,255,255,.028);--bd:#2a2e35;--bd2:#3a3f47;
+    --ink:#d9dce2;--dim:#8b9098;--faint:#565b64;--amber:#ffb000;--z:#46d17f;--x:#ff5a4f;--psi:#5cc6ff;
+    --sans:ui-monospace,"SF Mono",Menlo,Consolas,monospace;--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:13px/1.5 var(--sans);overflow:hidden}
+  #app{display:flex;height:100%}
+  #panel{width:312px;flex:0 0 312px;padding:16px;overflow-y:auto;background:linear-gradient(180deg,rgba(20,22,26,.92),rgba(14,15,18,.92));border-right:1px solid var(--bd)}
+  #stage{flex:1;position:relative;min-width:0}
+  canvas{display:block;width:100%;height:100%}
+  h1{font-size:15px;margin:0 0 2px;font-weight:650}
+  .sub{color:var(--faint);font-size:12px;margin:0 0 14px}
+  .beta{display:inline-block;margin-left:7px;padding:1px 7px;border:1px solid var(--amber);border-radius:999px;color:var(--amber);font:700 9px/1.5 var(--mono);letter-spacing:.16em;text-transform:uppercase;vertical-align:middle}
+  .card{background:var(--panel);border:1px solid var(--bd);border-radius:5px;padding:12px;margin-bottom:11px}
+  .card h2{font:700 11px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--amber);margin:0 0 10px}
+  label{display:block;margin:9px 0 3px;color:var(--dim);font-size:12px}
+  label:first-of-type{margin-top:0}
+  .val{float:right;color:var(--ink);font-family:var(--mono);font-size:11px}
+  input[type=range]{width:100%;accent-color:var(--amber);height:20px}
+  button{padding:8px 4px;background:#151530;color:var(--ink);border:1px solid var(--bd2);border-radius:9px;cursor:pointer;font:inherit;font-size:12px}
+  button:hover{background:#1d1d40}
+  #recaudiobtn.on{color:var(--x);border-color:var(--x)}
+  #rhythmbtn.on{color:var(--z);border-color:var(--z)}
+  .transport{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:11px}
+  #play{background:linear-gradient(180deg,#3a3f47,#20242a);color:var(--amber);font-weight:700}
+  .read{font:12px/1.7 var(--mono);color:var(--faint)} .read b{color:var(--psi)}
+  a.back{position:absolute;top:12px;left:12px;padding:7px 13px;background:rgba(20,20,40,.6);color:var(--dim);border:1px solid var(--bd);border-radius:999px;text-decoration:none;font-size:13px;z-index:4}
+  a.back:hover{color:var(--ink)}
+  #lang{position:absolute;top:12px;right:12px;padding:7px 14px;background:rgba(20,20,40,.6);color:var(--dim);border:1px solid var(--bd);border-radius:999px;cursor:pointer;font:inherit;font-size:13px;z-index:4}
+  #hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--dim);font-size:15px;pointer-events:none;padding:24px}
+  @media (max-width:760px){
+    html,body{overflow:auto}
+    #app{flex-direction:column;height:auto;min-height:100%}
+    #stage{order:1;width:100%;height:58vh;min-height:340px;flex:none}
+    #panel{order:2;width:100%;flex:none;border-right:none;border-top:1px solid var(--bd);padding:14px 16px 40px}
+    input[type=range]{height:28px}
+  }
+</style>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20fill='%2308080f'/%3E%3Ccircle%20cx='8'%20cy='10'%20r='2.5'%20fill='%23ffb000'/%3E%3Ccircle%20cx='16'%20cy='8'%20r='2.5'%20fill='%23ffb000'/%3E%3Ccircle%20cx='24'%20cy='10'%20r='2.5'%20fill='%23ffb000'/%3E%3Ccircle%20cx='16'%20cy='22'%20r='7'%20fill='none'%20stroke='%235cc6ff'%20stroke-width='2'/%3E%3C/svg%3E">
+</head>
+<body>
+<div id="app">
+  <div id="panel">
+    <h1 id="h1">Dicke · Superradianza <span class="beta">beta</span></h1>
+    <p class="sub" data-t="sub">N atomi in una cavità · lampo collettivo</p>
+    <div class="transport">
+      <button id="play" class="on" data-t="audio">◉ Audio</button>
+      <button id="pump" data-t="pump">ricarica ora</button>
+    </div>
+    <button id="recaudiobtn" style="width:100%;margin-bottom:11px">● REC audio · m4a</button>
+    <div class="card">
+      <h2 data-t="hens">ensemble</h2>
+      <label data-t="lN">numero di atomi N <span class="val" id="vN">12</span></label>
+      <input type="range" id="N" min="2" max="60" step="1" value="12">
+      <label data-t="lg">accoppiamento g <span class="val" id="vg">1.00</span></label>
+      <input type="range" id="g" min="0.3" max="2.5" step="0.01" value="1">
+      <label data-t="lpump">ricarica automatica <span class="val" id="vpump">0.5</span></label>
+      <input type="range" id="pumprate" min="0" max="1" step="0.01" value="0.5">
+    </div>
+    <div class="card">
+      <h2 data-t="hsound">suono</h2>
+      <label data-t="lspeed">velocità <span class="val" id="vspeed">0.5</span></label>
+      <input type="range" id="speed" min="0" max="1" step="0.01" value="0.5">
+      <label data-t="lvol">volume <span class="val" id="vvol">0.7</span></label>
+      <input type="range" id="vol" min="0" max="1" step="0.01" value="0.7">
+      <button id="rhythmbtn" style="width:100%;margin-top:8px">ritmo: off</button>
+      <label data-t="lrhyvol">volume ritmo <span class="val" id="vrhyvol">0.80</span></label>
+      <input type="range" id="rhyvol" min="0" max="1.5" step="0.01" value="0.8">
+    </div>
+    <div class="card"><div class="read" id="readout"></div></div>
+  </div>
+  <div id="stage">
+    <a class="back" href="../" data-t="back">← spiegazione del modello</a>
+    <button id="lang">EN</button>
+    <canvas id="cv"></canvas>
+    <div id="hint"><span data-t="hint">▶ premi <b>Audio</b>. N atomi eccitati emettono <b>insieme</b>: un lampo ritardato e intenso (∝ N²).</span></div>
+  </div>
+</div>
+<script>
+(function(){
+"use strict";
+var LANG=(function(){try{return localStorage.getItem('qlang')||'it';}catch(e){return 'it';}})();
+var STR={
+ it:{sub:"N atomi in una cavità · lampo collettivo",audio:"◉ Audio",pump:"ricarica ora",hens:"ensemble",
+   lN:"numero di atomi N",lg:"accoppiamento g",lpump:"ricarica automatica",hsound:"suono",lspeed:"velocità",lvol:"volume",
+   back:"← spiegazione del modello",
+   hint:'▶ premi <b>Audio</b>. N atomi eccitati emettono <b>insieme</b>: un lampo ritardato e intenso (∝ N²).',
+   inv:"inversione collettiva W(t)",intens:"intensità di emissione I(t) — il lampo superradiante",
+   charge:"carica",flash:"LAMPO",peak:"picco",delay:"ritardo",lrhyvol:"volume ritmo"},
+ en:{sub:"N atoms in one cavity · collective flash",audio:"◉ Audio",pump:"pump now",hens:"ensemble",
+   lN:"number of atoms N",lg:"coupling g",lpump:"auto re-pump",hsound:"sound",lspeed:"speed",lvol:"volume",
+   back:"← model explanation",
+   hint:'▶ press <b>Audio</b>. N excited atoms emit <b>together</b>: a delayed, intense flash (∝ N²).',
+   inv:"collective inversion W(t)",intens:"emission intensity I(t) — the superradiant flash",
+   charge:"charge",flash:"FLASH",peak:"peak",delay:"delay",lrhyvol:"rhythm volume"}
+};
+function T(k){return (STR[LANG]&&STR[LANG][k]!=null)?STR[LANG][k]:STR.it[k];}
+function applyLang(){document.querySelectorAll('[data-t]').forEach(function(n){var k=n.getAttribute('data-t');if(STR[LANG][k]==null)return;
+  var v=n.querySelector('.val');if(v){n.textContent=STR[LANG][k]+' ';n.appendChild(v);}else{n.innerHTML=STR[LANG][k];}});
+  document.getElementById('lang').textContent=LANG==='it'?'EN':'IT';document.documentElement.lang=LANG;if(window.__rhyLab)window.__rhyLab();}
+document.getElementById('lang').addEventListener('click',function(){LANG=LANG==='it'?'en':'it';try{localStorage.setItem('qlang',LANG);}catch(e){}applyLang();});
+
+var P={N:12,g:1,pumprate:0.5,speed:0.5,vol:0.7};
+var t=0, cycle=0, hist=[], flashDone=false, flashFlag=0, _emit=0;
+// Dicke superradiant pulse (semiclassical, fully inverted): W(t)=-tanh((t-tD)/(2τR)),
+// τR = 1/(N g), tD = τR ln N, intensity I = |dW/dt|; peak ∝ N².
+function tauR(){return 1/Math.max(1e-3,P.N*P.g);}
+function tD(){return tauR()*Math.log(Math.max(2,P.N));}
+function cycEnd(){return tD()+7*tauR();}
+function Winv(tt){return -Math.tanh((tt-tD())/(2*tauR()));}
+function Iem(tt){var s=1/Math.cosh((tt-tD())/(2*tauR()));return (1/(4*tauR()))*s*s;}
+
+/* ---- audio: a 'charge' pad while excited + a bright CHORD flash on the superradiant burst ---- */
+var AC=null,master,padOsc=[],padG,started=false;
+var percBus=null,percNoise=null,percOn=false,percVol=0.8;
+function pkick(){if(!percBus)return;var t=AC.currentTime;var o=AC.createOscillator(),g=AC.createGain();o.frequency.setValueAtTime(160,t);o.frequency.exponentialRampToValueAtTime(45,t+0.13);g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.9,t+0.006);g.gain.exponentialRampToValueAtTime(0.0008,t+0.24);o.connect(g);g.connect(percBus);o.start(t);o.stop(t+0.26);}
+function phat(v){if(!percBus)return;var t=AC.currentTime;var s=AC.createBufferSource();s.buffer=percNoise;var hp=AC.createBiquadFilter();hp.type='highpass';hp.frequency.value=7000;var g=AC.createGain();g.gain.setValueAtTime(Math.max(0.02,0.4*(v||1)),t);g.gain.exponentialRampToValueAtTime(0.0006,t+0.045);s.connect(hp);hp.connect(g);g.connect(percBus);s.start(t);s.stop(t+0.05);}
+var MAJ=[0,4,7,12,16], ROOT=98;   // G2 major stack
+var PENT=[0,2,4,7,9], ARPROOT=196;   // G3 pentatonic for the emission arpeggio
+function arpFreq(d){var dd=Math.max(0,d);return ARPROOT*Math.pow(2,Math.floor(dd/5))*Math.pow(2,PENT[dd%5]/12);}
+function arpNote(freq,when){if(!AC)return;var t=when||AC.currentTime;var o=AC.createOscillator();o.type='triangle';o.frequency.value=freq;
+  var g=AC.createGain();g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.16,t+0.008);g.gain.exponentialRampToValueAtTime(0.0006,t+0.28);
+  o.connect(g);g.connect(master);o.start(t);o.stop(t+0.3);}
+function initAudio(){ if(started)return;
+  AC=new (window.AudioContext||window.webkitAudioContext)();
+  master=AC.createGain();master.gain.value=P.vol;
+  var comp=AC.createDynamicsCompressor();comp.threshold.value=-16;comp.ratio.value=4;
+  var lim=AC.createDynamicsCompressor();lim.threshold.value=-1.5;lim.knee.value=0;lim.ratio.value=20;lim.attack.value=0.002;lim.release.value=0.12;
+  master.connect(comp);comp.connect(lim);lim.connect(AC.destination);
+  percBus=AC.createGain();percBus.gain.value=percVol;percBus.connect(comp);
+  percNoise=AC.createBuffer(1,Math.floor(AC.sampleRate*0.2),AC.sampleRate);var _pd=percNoise.getChannelData(0);for(var _pi=0;_pi<_pd.length;_pi++)_pd[_pi]=Math.random()*2-1;
+  padG=AC.createGain();padG.gain.value=0;padG.connect(master);
+  padOsc=[];for(var i=0;i<3;i++){var o=AC.createOscillator();o.type='sawtooth';o.frequency.value=ROOT*Math.pow(2,MAJ[i]/12);
+    var lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=600;o.connect(lp);lp.connect(padG);o.start();padOsc.push({o:o,lp:lp});}
+  started=true;document.getElementById('hint').style.display='none';document.getElementById('play').classList.remove('on');
+}
+function noiseBurst(){var b=AC.createBuffer(1,Math.floor(AC.sampleRate*0.4),AC.sampleRate),d=b.getChannelData(0);
+  for(var i=0;i<d.length;i++)d[i]=Math.random()*2-1;return b;}
+function flash(strength){ if(!started)return;var tc=AC.currentTime;
+  // chord stab (loudness ~ N via strength) + bright noise splash
+  for(var i=0;i<MAJ.length;i++){var o=AC.createOscillator();o.type='triangle';o.frequency.value=ROOT*2*Math.pow(2,MAJ[i]/12);
+    var g=AC.createGain();g.gain.setValueAtTime(0.0001,tc);g.gain.exponentialRampToValueAtTime(0.18*strength,tc+0.01);g.gain.exponentialRampToValueAtTime(0.0006,tc+0.5);
+    o.connect(g);g.connect(master);o.start(tc);o.stop(tc+0.55);}
+  var s=AC.createBufferSource();s.buffer=noiseBurst();var hp=AC.createBiquadFilter();hp.type='highpass';hp.frequency.value=4000;
+  var ng=AC.createGain();ng.gain.setValueAtTime(0.0001,tc);ng.gain.exponentialRampToValueAtTime(0.4*strength,tc+0.006);ng.gain.exponentialRampToValueAtTime(0.0006,tc+0.35);
+  s.connect(hp);hp.connect(ng);ng.connect(master);s.start(tc);s.stop(tc+0.4);
+}
+function updatePad(exc){ if(!started)return;var tc=AC.currentTime;
+  master.gain.setTargetAtTime(P.vol,tc,0.05);
+  padG.gain.setTargetAtTime(0.16*exc,tc,0.06);
+  for(var i=0;i<padOsc.length;i++)padOsc[i].lp.frequency.setTargetAtTime(400+900*exc,tc,0.1);   // brighter as it charges
+}
+
+var cv=document.getElementById('cv'),ctx=cv.getContext('2d'),W=0,H2=0,DPR=1;
+function resize(){var r=cv.getBoundingClientRect();W=r.width;H2=r.height;DPR=Math.min(window.devicePixelRatio||1,2);
+  cv.width=Math.round(W*DPR)&~1;cv.height=Math.round(H2*DPR)&~1;ctx.setTransform(DPR,0,0,DPR,0,0);}
+addEventListener('resize',resize);
+function txt(s,x,y,col,f){ctx.fillStyle=col;ctx.font=(f||'12px')+' var(--mono)';ctx.fillText(s,x,y);}
+var last=performance.now();
+function render(now){var dt=Math.min(0.05,(now-last)/1000);last=now;
+  t+=dt*(0.4+2.6*P.speed);
+  var Wv=Winv(t), exc=(1+Wv)/2, I=Iem(t);
+  // trigger the flash once, when we pass the emission peak t_D
+  if(!flashDone && t>=tD()){ flash(Math.min(2.2,0.5+P.N/22)); if(percOn)pkick(); flashDone=true; flashFlag=1; }
+  // end of cycle -> re-pump (auto) or wait
+  if(t>=cycEnd()){ if(P.pumprate>0){ t=0; flashDone=false; cycle++; } else { t=cycEnd(); } }
+  flashFlag*=0.90;
+  updatePad(exc);
+  // descending arpeggio DOWN the Dicke ladder: each emission step (M -> M-1) sounds a note;
+  // during the superradiant burst many steps fire at once -> a fast descending run.
+  var SPAN=14, deg=Math.round((1-exc)*SPAN);
+  if(started){ if(deg>_emit){var tc=AC.currentTime;for(var s=_emit+1;s<=deg;s++){arpNote(arpFreq(SPAN-s),tc+(s-_emit-1)*0.028);if(percOn)phat(0.6);}} _emit=deg; }
+  hist.push(I); var mh=Math.max(120,Math.floor(W)); if(hist.length>mh)hist.shift();
+  ctx.clearRect(0,0,W,H2);
+  var pad=Math.max(18,W*0.05);
+  // ===== atom cloud: N dots, lit ~ excited fraction, collective flash =====
+  var cyc=H2*0.30, cxc=W*0.5, spreadR=Math.min(W,H2)*0.22, N=P.N;
+  for(var i=0;i<N;i++){var ang=i/N*2*Math.PI+cycle*0.2, rr=spreadR*(0.35+0.65*((i*37)%N)/N);
+    var dx=cxc+Math.cos(ang)*rr, dy=cyc+Math.sin(ang)*rr*0.7;
+    var lit=exc; var col=lit>0.5?'255,176,0':'92,120,150';
+    ctx.fillStyle='rgba('+col+','+(0.3+0.7*lit).toFixed(2)+')';ctx.shadowColor='rgba(255,176,0,'+(flashFlag*0.9)+')';ctx.shadowBlur=flashFlag*22;
+    ctx.beginPath();ctx.arc(dx,dy,3.2,0,7);ctx.fill();}
+  ctx.shadowBlur=0;
+  if(flashFlag>0.05){txt(T('flash'),cxc-24,cyc-spreadR*0.7-6,'rgba(255,255,255,'+flashFlag.toFixed(2)+')','700 16px');}
+  txt(T('charge')+' '+(exc*100).toFixed(0)+'%',pad,cyc+spreadR*0.7+22,'rgba(255,176,0,.8)');
+  // ===== intensity plot I(t) =====
+  var y0=H2*0.86, amp=H2*0.26, mx=1e-6,i2;
+  for(i2=0;i2<hist.length;i2++)if(hist[i2]>mx)mx=hist[i2];
+  ctx.strokeStyle='rgba(120,130,160,.25)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad,y0);ctx.lineTo(W-pad,y0);ctx.stroke();
+  ctx.strokeStyle='#5cc6ff';ctx.lineWidth=2.2;ctx.shadowColor='#5cc6ff';ctx.shadowBlur=6;ctx.beginPath();
+  for(i2=0;i2<hist.length;i2++){var xx=pad+(W-2*pad)*i2/Math.max(1,hist.length-1),yy=y0-(hist[i2]/mx)*amp;if(i2===0)ctx.moveTo(xx,yy);else ctx.lineTo(xx,yy);}
+  ctx.stroke();ctx.shadowBlur=0;
+  txt(T('intens'),pad,y0-amp-10,'rgba(160,168,200,.75)');
+  document.getElementById('readout').innerHTML='N=<b>'+P.N+'</b> · g=<b>'+P.g.toFixed(2)+'</b><br>'+T('charge')+'=<b>'+(exc*100).toFixed(0)+'%</b> · I<sub>'+T('peak')+'</sub> ∝ N²<br><span style="color:var(--faint)">τ_R = 1/(N g) · '+T('delay')+' t_D = τ_R ln N</span>';
+  requestAnimationFrame(render);
+}
+
+function $(id){return document.getElementById(id);}
+$('play').onclick=function(){if(!started)initAudio();else if(AC.state==='suspended')AC.resume();};
+$('pump').onclick=function(){t=0;flashDone=false;cycle++;};
+function rng(id,vid,key,dec){var s=$(id);s.oninput=function(){var v=parseFloat(s.value);P[key]=v;$(vid).textContent=dec!=null?v.toFixed(dec):Math.round(v);
+  if(key==='vol'&&master)master.gain.setTargetAtTime(v,AC.currentTime,0.03);};}
+rng('N','vN','N',null);rng('g','vg','g',2);rng('pumprate','vpump','pumprate',2);rng('speed','vspeed','speed',1);rng('vol','vvol','vol',1);
+(function(){var rb=$('rhythmbtn');if(rb){function lab(){rb.textContent=(LANG==='it'?'ritmo: ':'rhythm: ')+(percOn?'on':'off');}
+  rb.onclick=function(){percOn=!percOn;rb.classList.toggle('on',percOn);lab();};window.__rhyLab=lab;lab();}
+  var rv=$('rhyvol');if(rv)rv.oninput=function(){percVol=parseFloat(rv.value);$('vrhyvol').textContent=percVol.toFixed(2);if(percBus&&AC)percBus.gain.setTargetAtTime(percVol,AC.currentTime,0.03);};})();
+/* ---- REC AUDIO (m4a / AAC, fallback webm-opus) ---- */
+(function(){var b=$('recaudiobtn');if(!b)return;var rec=null,chunks=[],dest=null,DEF='● REC audio · m4a';
+  function rmime(){var L=['audio/mp4;codecs=mp4a.40.2','audio/mp4','audio/webm;codecs=opus','audio/webm'];for(var i=0;i<L.length;i++){try{if(window.MediaRecorder&&MediaRecorder.isTypeSupported(L[i]))return L[i];}catch(e){}}return '';}
+  b.onclick=function(){ if(rec&&rec.state!=='inactive'){rec.stop();return;}
+    if(!started||!AC){alert(LANG==='it'?'Premi prima Audio':'Press Audio first');return;}
+    if(!dest){dest=AC.createMediaStreamDestination();master.connect(dest);}
+    var m=rmime();if(!m){alert(LANG==='it'?'Registrazione non supportata':'Recording not supported');return;}
+    try{rec=new MediaRecorder(dest.stream,{mimeType:m,audioBitsPerSecond:192000});}catch(e){try{rec=new MediaRecorder(dest.stream);}catch(e2){alert('no rec');return;}}
+    chunks=[];rec.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data);};
+    rec.onstop=function(){var ty=rec.mimeType||m,bl=new Blob(chunks,{type:ty}),ext=ty.indexOf('mp4')>=0?'m4a':'webm';
+      var url=URL.createObjectURL(bl),a=document.createElement('a');a.href=url;a.download='qusound-dicke.'+ext;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},2000);
+      b.textContent=DEF;b.classList.remove('on');};
+    rec.start(200);b.textContent='■ STOP';b.classList.add('on');};})();
+applyLang();resize();requestAnimationFrame(render);
+})();
+</script>
+</body>
+</html>

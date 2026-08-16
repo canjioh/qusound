@@ -16,7 +16,7 @@
   var CURRENT = null;
 
   var UI = {
-    it:{ modules:'Moduli', instruments:'Strumento', system:'Sistema', theory:'Teoria e storia',
+    it:{ modules:'Moduli', grpSolo:'Solo — sistema singolo', grpBand:'Band — sistema collettivo', instruments:'Strumento', system:'Sistema', theory:'Teoria e storia',
       presents:'n_c_c_n presenta', heroTitle:'Il suono di un qubit',
       biblio:'Bibliografia', bibliod:'i lavori a cui ci siamo ispirati',
       biblioIntro:'I lavori di musica quantistica a cui questa stazione si ispira.', eyebrow:'Sonificazione quantistica dal vivo',
@@ -26,7 +26,7 @@
       about:'about / colophon', aboutd:'crediti, riferimenti, pipeline',
       back:'← stazione', standbyNote:'in preparazione',
       sib:'stazione gemella', foot:'QuantumJazzStation' },
-    en:{ modules:'Modules', instruments:'Instrument', system:'System', theory:'Theory and history',
+    en:{ modules:'Modules', grpSolo:'Solo — single system', grpBand:'Band — collective system', instruments:'Instrument', system:'System', theory:'Theory and history',
       presents:'n_c_c_n presents', heroTitle:'The sound of a qubit',
       biblio:'Bibliography', bibliod:'the works that inspired us',
       biblioIntro:'The quantum-music works this station draws on.', eyebrow:'Live quantum sonification',
@@ -40,7 +40,13 @@
   function T(k){ return (UI[LANG]&&UI[LANG][k]!=null)?UI[LANG][k]:UI.it[k]; }
   function field(o,name){ if(LANG==='en' && o[name+'_en']!=null) return o[name+'_en']; return o[name]||''; }
   function esc(s){ return String(s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
-  function paras(s){ return String(s).split(/\n\n+/).map(function(p){ return '<p>'+esc(p.trim())+'</p>'; }).join(''); }
+  // LaTeX-ish typography: _{...}/^{...} and single-char _x/^x become real sub/superscripts.
+  function mathfmt(s){ return String(s)
+      .replace(/\^\{([^}]*)\}/g,'<sup>$1</sup>')
+      .replace(/_\{([^}]*)\}/g,'<sub>$1</sub>')
+      .replace(/\^([A-Za-z0-9±+\-])/g,'<sup>$1</sup>')
+      .replace(/_([A-Za-z0-9+\-])/g,'<sub>$1</sub>'); }
+  function paras(s){ return String(s).split(/\n\n+/).map(function(p){ return '<p>'+mathfmt(esc(p.trim()))+'</p>'; }).join(''); }
   function pad(n){ return (n<10?'0':'')+n; }
 
   function rerender(){ if(!CURRENT) return;
@@ -79,6 +85,28 @@
       for(var i=0;i<4;i++){ s+=sphere(pos[i][0],pos[i][1],20,0.6+i*1.3,cols[i]); }
       s+='</svg>'; return s;
     }
+    if(variant==='jc'){ return '<svg viewBox="0 0 130 118">'+
+      '<line x1="16" y1="40" x2="50" y2="40" stroke="rgba(255,255,255,.28)" stroke-width="2"/>'+
+      '<line x1="16" y1="74" x2="50" y2="74" stroke="rgba(255,255,255,.28)" stroke-width="2"/>'+
+      '<circle cx="33" cy="40" r="5" fill="#ffb000"/>'+
+      '<circle cx="66" cy="57" r="3" fill="#fff"/>'+
+      '<circle cx="95" cy="58" r="22" fill="none" stroke="#5cc6ff" stroke-width="2"/>'+
+      '<circle cx="95" cy="58" r="12" fill="none" stroke="rgba(92,198,255,.5)" stroke-width="1.5"/>'+
+      '</svg>'; }
+    if(variant==='qho'){ return '<svg viewBox="0 0 130 118">'+
+      '<path d="M20 24 Q65 116 110 24" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="2"/>'+
+      '<line x1="44" y1="68" x2="86" y2="68" stroke="rgba(92,198,255,.45)" stroke-width="1.4"/>'+
+      '<line x1="34" y1="86" x2="96" y2="86" stroke="rgba(92,198,255,.65)" stroke-width="1.4"/>'+
+      '<ellipse cx="65" cy="86" rx="16" ry="10" fill="rgba(255,176,0,.32)" stroke="#ffb000" stroke-width="2"/>'+
+      '</svg>'; }
+    if(variant==='dicke'){ var d='',dp=[[40,34],[56,26],[72,30],[88,36],[48,48],[66,44],[84,50]];
+      for(var q=0;q<dp.length;q++)d+='<circle cx="'+dp[q][0]+'" cy="'+dp[q][1]+'" r="3.4" fill="#ffb000"/>';
+      return '<svg viewBox="0 0 130 118"><circle cx="64" cy="42" r="30" fill="rgba(255,176,0,.10)"/>'+d+
+      '<ellipse cx="64" cy="88" rx="40" ry="14" fill="none" stroke="#5cc6ff" stroke-width="2"/></svg>'; }
+    if(variant==='phonons'){ var pts=[[18,60],[34,44],[50,70],[66,50],[82,66],[98,52],[114,60]],pl='',cc='';
+      for(var j=0;j<pts.length;j++){pl+=(j?' ':'')+pts[j][0]+','+pts[j][1];cc+='<circle cx="'+pts[j][0]+'" cy="'+pts[j][1]+'" r="4" fill="#ffb000"/>';}
+      return '<svg viewBox="0 0 130 118"><line x1="12" y1="60" x2="118" y2="60" stroke="rgba(255,255,255,.14)" stroke-width="1.4"/>'+
+      '<polyline points="'+pl+'" fill="none" stroke="rgba(255,176,0,.5)" stroke-width="2"/>'+cc+'</svg>'; }
     return '<svg viewBox="0 0 130 118">'+sphere(65,60,44,0.9,'#5cc6ff')+'</svg>';
   }
 
@@ -106,7 +134,7 @@
   function renderHome(mount){
     var P = window.PROJECTS || [];
     CURRENT={mode:'home',mount:mount}; document.documentElement.lang=LANG;
-    var units = P.map(function(p,k){
+    function unitHTML(p,k){
       var s=STAT[p.status]||STAT.standby;
       var href = p.status==='standby' ? null : (p.id+'/');
       var inner = screws()+
@@ -114,12 +142,14 @@
           '<span class="unit__id">UNIT '+pad(k+1)+'</span>'+
           '<span class="unit__stat '+s[0]+'">'+s[1]+'</span></div>'+
         '<div class="unit__viz">'+cardViz(p.viz||'solo')+'</div>'+
-        '<h3 class="unit__name">'+esc(p.title)+'</h3>'+
+        '<h3 class="unit__name">'+esc(field(p,'title'))+'</h3>'+
         '<p class="unit__desc">'+esc(field(p,'subtitle'))+'</p>'+
         '<div class="unit__tags">'+qtags(field(p,'qtags'))+'</div>';
       return href ? '<a class="unit" href="'+href+'">'+inner+'</a>'
                   : '<div class="unit is-standby">'+inner+'</div>';
-    }).join('');
+    }
+    var soloU='',bandU='';
+    P.forEach(function(p,k){ var h=unitHTML(p,k); if((p.group||'solo')==='band') bandU+=h; else soloU+=h; });
 
     mount.innerHTML =
       '<div class="wrap">'+
@@ -135,8 +165,10 @@
         '</header>'+
         '<div class="hazard"></div>'+
         '<div class="manifesto"><b>◇</b><span>'+T('manifesto')+'</span></div>'+
-        '<div class="sec-label">'+T('modules')+'</div>'+
-        '<div class="rack">'+units+'</div>'+
+        '<div class="sec-label">'+T('grpSolo')+'</div>'+
+        '<div class="rack">'+soloU+'</div>'+
+        '<div class="sec-label">'+T('grpBand')+'</div>'+
+        '<div class="rack">'+bandU+'</div>'+
         '<div class="sec-label">'+T('system')+'</div>'+
         '<div class="sysrow">'+
           '<a href="about.html">◦ '+T('about')+', <span style="color:var(--faint)">'+T('aboutd')+'</span></a>'+
@@ -167,7 +199,7 @@
         '<span>'+esc(field(sm,'desc'))+'</span></span></a>';
     }).join('') : '<p class="prose">'+T('standbyNote')+'.</p>';
 
-    var principle = field(p,'principle');
+    var principle = field(p,'principle'); if(principle) principle=mathfmt(principle);
     var pr = principle ? '<div class="qcallout"><span class="qcallout__k">'+T('principleK')+'</span>'+
       '<span class="qcallout__t">'+principle+'</span></div>' : '';
 
@@ -178,7 +210,7 @@
           '<span class="sp"></span>'+langBtn()+'</div>'+
         '<div class="doc">'+
           '<a class="backlink" href="../">'+T('back')+'</a>'+
-          '<h1 class="engrave">'+esc(p.title)+'</h1>'+
+          '<h1 class="engrave">'+esc(field(p,'title'))+'</h1>'+
           '<p class="sub">'+esc(field(p,'subtitle'))+'</p>'+
           (field(p,'credit')?'<p class="credit">— '+esc(field(p,'credit'))+'</p>':'')+
           pr+

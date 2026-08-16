@@ -25,12 +25,19 @@
   canvas{display:block;width:100%;height:100%}
   h1{font-size:15px;margin:0 0 2px;font-weight:650}
   .sub{color:var(--faint);font-size:12px;margin:0 0 14px}
-  .card{background:var(--panel);border:1px solid var(--bd);border-radius:5px;padding:12px;margin-bottom:11px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+  .card{position:relative;background:var(--panel);border:1px solid var(--bd);border-radius:5px;padding:12px;margin-bottom:11px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+  .qhelp{position:absolute;top:10px;right:11px;width:18px;height:18px;line-height:16px;text-align:center;border:1px solid var(--bd2);border-radius:50%;color:var(--dim);font-size:11px;cursor:help;user-select:none}
+  .qhelp .tip{position:absolute;top:23px;right:-2px;width:236px;display:none;background:#0f0f18;border:1px solid var(--bd2);border-radius:6px;padding:9px 11px;color:var(--dim);font-size:11px;line-height:1.55;z-index:10;box-shadow:0 8px 24px rgba(0,0,0,.55);text-align:left;font-weight:400}
+  .qhelp .tip b{color:var(--psi)}
+  .qhelp:hover .tip{display:block}
   .card h2{font:700 11px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--amber);margin:0 0 10px}
   .recrow{display:flex;gap:6px}
   .recrow select{flex:1}
   #recbtn{flex:0 0 auto;font-weight:700;letter-spacing:.06em}
   #recbtn.on{background:var(--x);color:#180303;border-color:var(--x)}
+  #drumbtn.on{color:var(--psi);border-color:var(--psi)}
+  #groovebtn.on{color:var(--z);border-color:var(--z)}
+  #recaudiobtn.on{color:var(--x);border-color:var(--x)}
   .keys{margin-top:9px;color:var(--faint);font-size:11px;line-height:1.6}
   label{display:block;margin:9px 0 3px;color:var(--dim);font-size:12px}
   label:first-of-type{margin-top:0}
@@ -95,6 +102,15 @@
       <button id="play" class="on"><span data-t="audio">◉ Audio</span></button>
       <button id="pause">⏸ Pausa</button>
       <button id="reset" data-t="reset">RESET |+⟩</button>
+    </div>
+    <button id="recaudiobtn" style="width:100%;margin-bottom:11px">● REC audio · m4a</button>
+    <div class="card">
+      <span class="qhelp">?<span class="tip" data-t="drumnote"></span></span>
+      <h2 data-t="hdrum">batteria</h2>
+      <button id="drumbtn" class="on" style="width:100%">batteria: ON</button>
+      <label data-t="ldrumvol">volume batteria <span class="val" id="vdrumvol">0.9</span></label>
+      <input type="range" id="drumvol" min="0" max="1.5" step="0.01" value="0.9">
+      <button id="groovebtn" style="width:100%;margin-top:9px">groove: off</button>
     </div>
 
     <div class="card">
@@ -216,6 +232,8 @@ var STR={
    wPure:"puro",wMixed:"misto",wMax:"max misto",rLeg:"sfera piena = stato puro · centro = massimo entanglement",
    tDrone:"continuo on/off (spento = solo le note della misura)",onlyNotes:"solo note",
    hrec:"registrazione",keysnote:"tasti: [1-4] misura una voce · [spazio] misura tutte · [b] cambia base · [j] +accoppiamento",
+   hdrum:"batteria",ldrumvol:"volume batteria",
+   drumnote:'La batteria nasce dai qubit: <b>hi-hat</b> a ogni passaggio del qubit per l\'equatore (il ritmo è la velocità di precessione), <b>cassa</b> quando la magnetizzazione totale &Sigma;&langle;Z&rangle; attraversa lo zero, <b>rullante</b> a ogni collasso da misura, <b>piatto</b> quando cresce l\'entanglement.',
    lview:"vista (per registrazione / live)",vwfull:"piena (con scritte)",vwsph:"solo sfere",vwmin:"essenziale (profili)"},
  en:{sub:"multi-qubit register · coupling",audio:"◉ Audio",reset:"RESET |+⟩",hfield:"field / coupling",
    lnq:"number of qubits",lspeed:"speed",lcoup:"coupling J (entanglement)",ltopo:"coupling network",lspread:"field diversity",
@@ -227,12 +245,14 @@ var STR={
    wPure:"pure",wMixed:"mixed",wMax:"max mixed",rLeg:"full sphere = pure state · centre = maximal entanglement",
    tDrone:"continuous on/off (off = only the measurement notes)",onlyNotes:"notes only",
    hrec:"recording",keysnote:"keys: [1-4] measure a voice · [space] measure all · [b] switch basis · [j] +coupling",
+   hdrum:"drums",ldrumvol:"drums volume",
+   drumnote:'The drums come from the qubits: <b>hi-hat</b> on each equator crossing of a qubit (the rhythm is the precession rate), <b>kick</b> when the total magnetization &Sigma;&langle;Z&rangle; crosses zero, <b>snare</b> on each measurement collapse, <b>cymbal</b> when entanglement rises.',
    lview:"view (for recording / live)",vwfull:"full (with labels)",vwsph:"spheres only",vwmin:"minimal (profiles)"}
 };
 function T(k){return (STR[LANG]&&STR[LANG][k]!=null)?STR[LANG][k]:STR.it[k];}
 function applyLang(){document.querySelectorAll('[data-t]').forEach(function(n){var k=n.getAttribute('data-t');if(STR[LANG][k]==null)return;
     var v=n.querySelector('.val'); if(v){ n.textContent=STR[LANG][k]+' '; n.appendChild(v); } else { n.innerHTML=STR[LANG][k]; }});
-  document.getElementById('lang').textContent=LANG==='it'?'EN':'IT';document.documentElement.lang=LANG;buildVoiceRows();if(window.__pauseLab)window.__pauseLab();}
+  document.getElementById('lang').textContent=LANG==='it'?'EN':'IT';document.documentElement.lang=LANG;buildVoiceRows();if(window.__pauseLab)window.__pauseLab();if(window.__drumLab)window.__drumLab();}
 document.getElementById('lang').addEventListener('click',function(){LANG=LANG==='it'?'en':'it';try{localStorage.setItem('qlang',LANG);}catch(e){}applyLang();});
 
 /* ---- instruments ---- */
@@ -336,6 +356,8 @@ function measureAll(){ for(var i=0;i<NQ;i++) measureQ(i,basis); }
 
 /* ---- audio ---- */
 var AC=null,master,haze,hazeGain,voices=[],started=false;
+var drumBus=null,noiseBuf=null,drumOn=true,drumVol=0.9,_dz=[0,0,0,0],_dm=0,_df=[0,0,0,0],_dv=0,_dInit=false,_lastHat=[0,0,0,0],_lastKick=0,_lastSnare=0,_lastCrash=0;
+var grooveOn=false,_beat=0,_hph=0,_pump=1;   // groove: emergent-tempo beat grid + sidechain pump
 function makeNoise(){var len=AC.sampleRate*2,buf=AC.createBuffer(1,len,AC.sampleRate),d=buf.getChannelData(0);
   var lp=0;for(var i=0;i<len;i++){var w=Math.random()*2-1;lp=(lp*0.97)+(w*0.03);d[i]=lp*3;}var s=AC.createBufferSource();s.buffer=buf;s.loop=true;return s;}
 var MOBILE=(window.matchMedia&&window.matchMedia('(max-width:760px)').matches)||/Mobi|Android|iPhone|iPod/i.test(navigator.userAgent||'');
@@ -348,6 +370,9 @@ function initAudio(){
   var outGain=AC.createGain();outGain.gain.value=MOBILE?1.85:1.0;
   var lim=AC.createDynamicsCompressor();lim.threshold.value=-1.5;lim.knee.value=0;lim.ratio.value=20;lim.attack.value=0.002;lim.release.value=0.12;
   master.connect(comp);comp.connect(outGain);outGain.connect(lim);lim.connect(AC.destination);
+  // percussion bus + a static noise buffer for hats/snare
+  drumBus=AC.createGain();drumBus.gain.value=drumVol;drumBus.connect(master);
+  noiseBuf=AC.createBuffer(1,Math.floor(AC.sampleRate*0.4),AC.sampleRate);var _nd=noiseBuf.getChannelData(0);for(var _ni=0;_ni<_nd.length;_ni++)_nd[_ni]=Math.random()*2-1;
   var send=AC.createGain();send.gain.value=0.24;var d=AC.createDelay();d.delayTime.value=0.17;var fb=AC.createGain();fb.gain.value=0.34;
   master.connect(send);send.connect(d);d.connect(fb);fb.connect(d);d.connect(comp);
   // global decoherence haze
@@ -365,6 +390,51 @@ function initAudio(){
     voices.push({o:o,o2:o2,flt:flt,g:g,pan:pan});
   }
   started=true;document.getElementById('hint').style.display='none';document.getElementById('play').classList.remove('on');
+}
+/* ---- percussion DRIVEN by the register's own dynamics (no metronome, no RNG):
+   hi-hat = a qubit's <Z> crossing the equator (its rate IS the precession/Larmor freq; velocity ~ purity |r|),
+   kick   = the total magnetization Σ<Z> crossing zero (the collective downbeat),
+   snare  = a measurement collapse. Toggle with the "batteria" button. ---- */
+function kick(){if(!drumBus)return;var t=AC.currentTime;var o=AC.createOscillator(),g=AC.createGain();
+  o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(45,t+0.12);
+  g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.9,t+0.006);g.gain.exponentialRampToValueAtTime(0.0008,t+0.22);
+  o.connect(g);g.connect(drumBus);o.start(t);o.stop(t+0.24);}
+function hat(v){if(!drumBus)return;var t=AC.currentTime;var s=AC.createBufferSource();s.buffer=noiseBuf;
+  var hp=AC.createBiquadFilter();hp.type='highpass';hp.frequency.value=7000;var g=AC.createGain();
+  g.gain.setValueAtTime(Math.max(0.02,0.5*v),t);g.gain.exponentialRampToValueAtTime(0.0006,t+0.05);
+  s.connect(hp);hp.connect(g);g.connect(drumBus);s.start(t);s.stop(t+0.06);}
+function snare(){if(!drumBus)return;var t=AC.currentTime;var s=AC.createBufferSource();s.buffer=noiseBuf;
+  var bp=AC.createBiquadFilter();bp.type='bandpass';bp.frequency.value=1800;bp.Q.value=0.7;var g=AC.createGain();
+  g.gain.setValueAtTime(0.7,t);g.gain.exponentialRampToValueAtTime(0.0008,t+0.18);s.connect(bp);bp.connect(g);g.connect(drumBus);s.start(t);s.stop(t+0.2);
+  var o=AC.createOscillator();o.type='triangle';o.frequency.setValueAtTime(330,t);var g2=AC.createGain();
+  g2.gain.setValueAtTime(0.25,t);g2.gain.exponentialRampToValueAtTime(0.0008,t+0.12);o.connect(g2);g2.connect(drumBus);o.start(t);o.stop(t+0.13);}
+function crash(){if(!drumBus)return;var t=AC.currentTime;var s=AC.createBufferSource();s.buffer=noiseBuf;s.loop=true;
+  var hp=AC.createBiquadFilter();hp.type='highpass';hp.frequency.value=5000;
+  var pk=AC.createBiquadFilter();pk.type='bandpass';pk.frequency.value=9000;pk.Q.value=0.6;
+  var g=AC.createGain();g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.5,t+0.01);g.gain.exponentialRampToValueAtTime(0.0006,t+0.7);
+  s.connect(hp);hp.connect(pk);pk.connect(g);g.connect(drumBus);s.start(t);s.stop(t+0.75);}
+function drumStep(dt){
+  if(!drumOn||!started||!AC||paused)return;var t=AC.currentTime,M=0,veil=0,snareNow=false,sumB=0;
+  for(var i=0;i<NQ;i++){var e=expect(i);M+=e.z;veil+=(1-e.r);var f=fieldOf(i);sumB+=Math.hypot(f[0],f[1]);
+    if(!grooveOn && _dInit && _dz[i]*e.z<0 && e.r>0.06 && (t-_lastHat[i])>0.055){ hat(0.25+0.7*e.r); _lastHat[i]=t; }
+    _dz[i]=e.z;
+    if(_dInit && (flash[i]-_df[i])>0.4) snareNow=true; _df[i]=flash[i];
+  }
+  veil=NQ?veil/NQ:0;
+  if(grooveOn){                       // tempo emerges from the mean precession rate |B|·speed
+    var meanB=NQ?sumB/NQ:0.5, beatT=Math.max(0.28,Math.min(0.95, 1.15/(0.3+meanB*P.speed*2.4)));
+    _beat+=dt/beatT; if(_beat>=1){_beat-=1; kick(); _pump=0.30;}          // four-on-the-floor
+    _hph+=dt/(beatT*0.5); if(_hph>=1){_hph-=1; hat(0.4);}                  // 8th-note hats
+    _pump+=(1-_pump)*Math.min(1,dt*7);                                    // sidechain recovery
+  } else {
+    _pump=1;
+    if(_dInit && _dm*M<0 && (t-_lastKick)>0.11){ kick(); _lastKick=t; }
+  }
+  _dm=M;
+  if(snareNow && (t-_lastSnare)>0.1){ snare(); _lastSnare=t; }
+  if(_dInit && _dv<0.5 && veil>=0.5 && (t-_lastCrash)>0.4){ crash(); _lastCrash=t; }   // cymbal when entanglement rises
+  _dv=veil;
+  _dInit=true;
 }
 function tableSemis(){var t=[];for(var oct=0;oct<3;oct++)for(var i=0;i<SCALE.length;i++){var v=oct*12+SCALE[i];if(v<=P.range)t.push(v);}if(!t.length)t.push(0);return t;}
 function mapSemis(z){var s=((1-z)/2)*P.range;if(P.quant){var t=tableSemis(),best=t[0],bd=1e9;for(var i=0;i<t.length;i++){var dd=Math.abs(t[i]-s);if(dd<bd){bd=dd;best=t[i];}}s=best;}return s+P.tr;}
@@ -387,7 +457,7 @@ function updateVoices(){
     v.o.frequency.setTargetAtTime(fr,t,0.05);v.o2.frequency.setTargetAtTime(fr,t,0.05);
     v.o2.detune.setTargetAtTime(7+veil*45,t,0.06);
     v.flt.frequency.setTargetAtTime(Math.max(180,INST[i].cut*(1-0.6*veil)),t,0.06);
-    v.g.gain.setTargetAtTime(voiceDrone[i]?P.drone*voiceVol[i]*0.34*wg(i)*(1-0.35*veil):0,t,0.05);
+    v.g.gain.setTargetAtTime(voiceDrone[i]?P.drone*voiceVol[i]*0.34*wg(i)*(1-0.35*veil)*(grooveOn?_pump:1):0,t,0.05);
     if(v.pan)v.pan.pan.setTargetAtTime(Math.max(-1,Math.min(1,e.x*0.8+(i-1.5)*0.2)),t,0.08);
   }
   avgVeil=cnt?avgVeil/cnt:0;
@@ -432,6 +502,16 @@ var paused=false;
     if(AC){if(paused)AC.suspend();else AC.resume();}
     lab();});
   window.__pauseLab=lab;lab();
+})();
+(function(){var db=document.getElementById('drumbtn');
+  if(db){ function lab(){db.textContent=(LANG==='it'?'batteria: ':'drums: ')+(drumOn?'ON':'off');}
+    db.onclick=function(){drumOn=!drumOn;db.classList.toggle('on',drumOn);lab();};
+    window.__drumLab=lab;lab(); }
+  var dv=document.getElementById('drumvol');
+  if(dv){ dv.oninput=function(){drumVol=parseFloat(dv.value);var sp=document.getElementById('vdrumvol');if(sp)sp.textContent=drumVol.toFixed(2);
+    if(drumBus&&AC)drumBus.gain.setTargetAtTime(drumVol,AC.currentTime,0.03);}; }
+  var gb=document.getElementById('groovebtn');
+  if(gb){ gb.onclick=function(){grooveOn=!grooveOn;gb.classList.toggle('on',grooveOn);gb.textContent='groove: '+(grooveOn?'on':'off');_beat=0;_hph=0;_pump=1;}; }
 })();
 document.getElementById('reset').addEventListener('click',function(){initState();for(var i=0;i<4;i++)flash[i]=0;});
 document.getElementById('nq').addEventListener('change',function(){NQ=parseInt(this.value,10);initState();couplingPairs=computePairs();buildVoiceRows();});
@@ -508,6 +588,7 @@ function render(now){
   var dt=Math.min(0.045,(now-last)/1000);last=now;
   // continuous evolution (Trotter): local fields + Ising coupling — frozen while paused
   if(!paused){ localStep(dt); couplingStep(dt); normalize(); }
+  drumStep(dt);   // percussion driven by the live dynamics
 
   ctx.clearRect(0,0,W,H2);
   var n=NQ, portrait=(W < H2*1.15 && n>=3), cxs=[], cys=[], sr;
@@ -653,6 +734,19 @@ function drawReadout(avgVeil){
   };
 })();
 
+/* ---- REC AUDIO (m4a / AAC, fallback webm-opus) ---- */
+(function(){var b=document.getElementById('recaudiobtn');if(!b)return;var rec=null,chunks=[],dest=null,DEF='● REC audio · m4a';
+  function rmime(){var L=['audio/mp4;codecs=mp4a.40.2','audio/mp4','audio/webm;codecs=opus','audio/webm'];for(var i=0;i<L.length;i++){try{if(window.MediaRecorder&&MediaRecorder.isTypeSupported(L[i]))return L[i];}catch(e){}}return '';}
+  b.onclick=function(){ if(rec&&rec.state!=='inactive'){rec.stop();return;}
+    if(!started||!AC){alert(LANG==='it'?'Premi prima Audio':'Press Audio first');return;}
+    if(!dest){dest=AC.createMediaStreamDestination();master.connect(dest);}
+    var m=rmime();if(!m){alert(LANG==='it'?'Registrazione non supportata':'Recording not supported');return;}
+    try{rec=new MediaRecorder(dest.stream,{mimeType:m,audioBitsPerSecond:192000});}catch(e){try{rec=new MediaRecorder(dest.stream);}catch(e2){alert('no rec');return;}}
+    chunks=[];rec.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data);};
+    rec.onstop=function(){var ty=rec.mimeType||m,bl=new Blob(chunks,{type:ty}),ext=ty.indexOf('mp4')>=0?'m4a':'webm';
+      var url=URL.createObjectURL(bl),a=document.createElement('a');a.href=url;a.download='qusound-band.'+ext;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},2000);
+      b.textContent=DEF;b.classList.remove('on');};
+    rec.start(200);b.textContent='■ STOP';b.classList.add('on');};})();
 initState();couplingPairs=computePairs();applyLang();resize();requestAnimationFrame(render);
 })();
 </script>
