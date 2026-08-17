@@ -435,6 +435,86 @@ window.PROJECTS = [
         desc_en:"Chain of N coupled oscillators: pluck a site, hear the normal modes, the timbre is the dispersion",
         status:"online", year:2026 }
     ]
+  },
+
+  {
+    id: "qec",
+    group: "band",
+    title: "QEC · codice a 3 qubit",
+    title_en: "QEC · 3-qubit code",
+    viz: "qec",
+    subtitle: "Correzione d'errore: uno stato entangled misurato di continuo, la melodia logica sopravvive",
+    subtitle_en: "Error correction: an entangled state measured continuously, the logical melody survives",
+    category: "QUANTUM SONIFICATION",
+    status: "online",
+    qtags: ["Stabilizzatori","psi:Sindrome & correzione","hz:Osservabili multi-qubit"],
+    qtags_en: ["Stabilizers","psi:Syndrome & correction","hz:Multi-qubit observables"],
+    principle:
+      "La correzione d'errore quantistica codifica UN qubit logico in uno stato <b>entangled</b> di più " +
+      "qubit e poi ne misura di continuo alcuni <b>stabilizzatori</b>: osservabili di PARITÀ su più " +
+      "qubit (mai sul singolo qubit), che rivelano se è avvenuto un errore SENZA leggere l'informazione " +
+      "logica. La sindrome dice quale errore, e tu correggi: l'informazione sopravvive.",
+    principle_en:
+      "Quantum error correction encodes ONE logical qubit in an <b>entangled</b> state of several " +
+      "qubits and then keeps measuring some <b>stabilizers</b>: multi-qubit PARITY observables (never a " +
+      "single qubit), which reveal whether an error occurred WITHOUT reading the logical information. " +
+      "The syndrome tells which error, and you correct it: the information survives.",
+    abstract:
+      "Il codice a ripetizione a 3 qubit protegge un qubit logico dai bit-flip. Lo stato logico " +
+      "α|000⟩ + β|111⟩ è entangled; misurando le parità Z₁Z₂ e Z₂Z₃ scopri se e dove un qubit si è " +
+      "capovolto, e lo raddrizzi. Qui la melodia è il qubit logico: attraversa gli errori senza " +
+      "cambiare, finché la correzione tiene il passo. Spegni la correzione, o alza troppo il rumore, e " +
+      "la senti degradare: è la soglia della QEC resa suono.",
+    abstract_en:
+      "The 3-qubit repetition code protects a logical qubit from bit-flips. The logical state " +
+      "α|000⟩ + β|111⟩ is entangled; measuring the parities Z₁Z₂ and Z₂Z₃ reveals whether and where a " +
+      "qubit flipped, and you straighten it. Here the melody is the logical qubit: it passes through the " +
+      "errors unchanged as long as correction keeps up. Turn correction off, or raise the noise too far, " +
+      "and you hear it degrade: the QEC threshold turned into sound.",
+    math:
+      "Un qubit logico è codificato in tre qubit fisici: |0⟩_L = |000⟩, |1⟩_L = |111⟩, quindi lo stato " +
+      "generale è |ψ⟩_L = α|000⟩ + β|111⟩, uno stato ENTANGLED. Il codice è definito dai suoi " +
+      "STABILIZZATORI, gli operatori che lo lasciano invariato (+1): S₁ = Z₁Z₂ e S₂ = Z₂Z₃. Sono " +
+      "osservabili su DUE qubit, cioè controlli di PARITÀ, e commutano con gli operatori logici " +
+      "(Z_L = Z₁, X_L = X₁X₂X₃): per questo misurarli NON collassa la sovrapposizione logica α, β, ma " +
+      "solo l'eventuale errore.\n\n" +
+      "Un errore di bit-flip Xᵢ anticommuta con gli stabilizzatori che contengono quel qubit, quindi ne " +
+      "ribalta il valore misurato da +1 a −1. La coppia di esiti (S₁, S₂) è la SINDROME: (+,+) nessun " +
+      "errore; (−,+) errore sul qubit 1; (−,−) sul qubit 2; (+,−) sul qubit 3. Il decoder legge la " +
+      "sindrome e applica la Xᵢ giusta, riportando lo stato nel codice. Se però due errori arrivano " +
+      "prima di una correzione, la sindrome è ambigua e la correzione sbagliata produce un ERRORE " +
+      "LOGICO (X_L): la nota logica salta davvero. È la distanza-3 del codice (corregge un errore, non " +
+      "due).\n\n" +
+      "In linguaggio ZX gli stabilizzatori sono spider (verdi per Z), il codeword è un diagramma, e la " +
+      "misura di sindrome è uno spider con una gamba-effetto: propagare un errore attraverso il " +
+      "diagramma e leggerne la parità è esattamente lo spostamento di spider dello ZX-calculus, che per " +
+      "questo è il formalismo naturale della QEC. Nel suono: il qubit logico è la melodia (sopravvive), " +
+      "ogni ciclo di misura è un battito (tic se pulito, allerta se c'è sindrome), l'iniezione di errore " +
+      "è un glitch e un errore logico è un tonfo con salto di nota.",
+    math_en:
+      "A logical qubit is encoded in three physical qubits: |0⟩_L = |000⟩, |1⟩_L = |111⟩, so the general " +
+      "state is |ψ⟩_L = α|000⟩ + β|111⟩, an ENTANGLED state. The code is defined by its STABILIZERS, the " +
+      "operators that leave it invariant (+1): S₁ = Z₁Z₂ and S₂ = Z₂Z₃. They are TWO-qubit observables, " +
+      "i.e. PARITY checks, and they commute with the logical operators (Z_L = Z₁, X_L = X₁X₂X₃): that is " +
+      "why measuring them does NOT collapse the logical superposition α, β, only the error.\n\n" +
+      "A bit-flip error Xᵢ anticommutes with the stabilizers that contain that qubit, so it flips their " +
+      "measured value from +1 to −1. The pair of outcomes (S₁, S₂) is the SYNDROME: (+,+) no error; " +
+      "(−,+) error on qubit 1; (−,−) on qubit 2; (+,−) on qubit 3. The decoder reads the syndrome and " +
+      "applies the right Xᵢ, returning the state to the code. But if two errors arrive before a " +
+      "correction, the syndrome is ambiguous and the wrong correction produces a LOGICAL ERROR (X_L): " +
+      "the logical note really jumps. That is the code's distance 3 (it corrects one error, not two).\n\n" +
+      "In ZX language the stabilizers are spiders (green for Z), the codeword is a diagram, and the " +
+      "syndrome measurement is a spider with an effect-leg: propagating an error through the diagram and " +
+      "reading its parity is exactly the spider rewriting of the ZX-calculus, which is why ZX is the " +
+      "natural formalism for QEC. In sound: the logical qubit is the melody (it survives), each " +
+      "measurement cycle is a beat (a tick when clean, an alert on a syndrome), injecting an error is a " +
+      "glitch, and a logical error is a thud with a jump of pitch.",
+    sims: [
+      { id:"qec", title:"QEC · codice a 3 qubit", title_en:"QEC · 3-qubit code", file:"sim/qec.html",
+        desc:"Stato entangled α|000⟩+β|111⟩, misura continua di Z₁Z₂ e Z₂Z₃, sindrome, correzione, rumore/flip manuali",
+        desc_en:"Entangled state α|000⟩+β|111⟩, continuous Z₁Z₂ and Z₂Z₃ measurement, syndrome, correction, noise/manual flips",
+        status:"online", year:2026 }
+    ]
   }
 ];
 

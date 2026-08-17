@@ -107,6 +107,11 @@
       for(var j=0;j<pts.length;j++){pl+=(j?' ':'')+pts[j][0]+','+pts[j][1];cc+='<circle cx="'+pts[j][0]+'" cy="'+pts[j][1]+'" r="4" fill="#ffb000"/>';}
       return '<svg viewBox="0 0 130 118"><line x1="12" y1="60" x2="118" y2="60" stroke="rgba(255,255,255,.14)" stroke-width="1.4"/>'+
       '<polyline points="'+pl+'" fill="none" stroke="rgba(255,176,0,.5)" stroke-width="2"/>'+cc+'</svg>'; }
+    if(variant==='qec'){ var qx=[30,65,100],qcc='';for(var q=0;q<3;q++)qcc+='<circle cx="'+qx[q]+'" cy="52" r="8" fill="#5cc6ff"/>';
+      return '<svg viewBox="0 0 130 118">'+
+      '<line x1="30" y1="52" x2="65" y2="52" stroke="#46d17f" stroke-width="2"/><line x1="65" y1="52" x2="100" y2="52" stroke="#46d17f" stroke-width="2"/>'+
+      '<circle cx="47.5" cy="36" r="4" fill="none" stroke="#46d17f" stroke-width="1.6"/><circle cx="82.5" cy="36" r="4" fill="none" stroke="#46d17f" stroke-width="1.6"/>'+
+      qcc+'<line x1="20" y1="80" x2="110" y2="80" stroke="rgba(255,176,0,.5)" stroke-width="2"/><circle cx="65" cy="80" r="4" fill="#ffb000"/></svg>'; }
     return '<svg viewBox="0 0 130 118">'+sphere(65,60,44,0.9,'#5cc6ff')+'</svg>';
   }
 
