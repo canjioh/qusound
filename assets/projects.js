@@ -440,11 +440,11 @@ window.PROJECTS = [
   {
     id: "qec",
     group: "band",
-    title: "QEC · codice a 3 qubit",
-    title_en: "QEC · 3-qubit code",
+    title: "QEC · codice a ripetizione",
+    title_en: "QEC · repetition code",
     viz: "qec",
-    subtitle: "Correzione d'errore: uno stato entangled misurato di continuo, la melodia logica sopravvive",
-    subtitle_en: "Error correction: an entangled state measured continuously, the logical melody survives",
+    subtitle: "Correzione d'errore (bit-flip o phase-flip, N qubit): stato entangled misurato di continuo, la melodia logica sopravvive",
+    subtitle_en: "Error correction (bit-flip or phase-flip, N qubits): an entangled state measured continuously, the logical melody survives",
     category: "QUANTUM SONIFICATION",
     status: "online",
     qtags: ["Stabilizzatori","psi:Sindrome & correzione","hz:Osservabili multi-qubit"],
@@ -490,7 +490,11 @@ window.PROJECTS = [
       "diagramma e leggerne la parità è esattamente lo spostamento di spider dello ZX-calculus, che per " +
       "questo è il formalismo naturale della QEC. Nel suono: il qubit logico è la melodia (sopravvive), " +
       "ogni ciclo di misura è un battito (tic se pulito, allerta se c'è sindrome), l'iniezione di errore " +
-      "è un glitch e un errore logico è un tonfo con salto di nota.",
+      "è un glitch e un errore logico è un tonfo con salto di nota.\n\n" +
+      "Lo stesso schema vale, coniugato da Hadamard, per il codice PHASE-FLIP (stabilizzatori X₁X₂, X₂X₃, " +
+      "errori Z), e si estende a N qubit: con più qubit il codice corregge più errori, fino a ⌊(N−1)/2⌋. " +
+      "Nello strumento puoi scegliere il tipo (bit o phase) e N, e ogni qubit ha una sua voce pentatonica " +
+      "che canta quando viene colpito o corretto — così l'attività di correzione diventa una melodia.",
     math_en:
       "A logical qubit is encoded in three physical qubits: |0⟩_L = |000⟩, |1⟩_L = |111⟩, so the general " +
       "state is |ψ⟩_L = α|000⟩ + β|111⟩, an ENTANGLED state. The code is defined by its STABILIZERS, the " +
@@ -508,7 +512,11 @@ window.PROJECTS = [
       "reading its parity is exactly the spider rewriting of the ZX-calculus, which is why ZX is the " +
       "natural formalism for QEC. In sound: the logical qubit is the melody (it survives), each " +
       "measurement cycle is a beat (a tick when clean, an alert on a syndrome), injecting an error is a " +
-      "glitch, and a logical error is a thud with a jump of pitch.",
+      "glitch, and a logical error is a thud with a jump of pitch.\n\n" +
+      "The same scheme, conjugated by Hadamard, gives the PHASE-FLIP code (stabilizers X₁X₂, X₂X₃, Z " +
+      "errors), and extends to N qubits: with more qubits the code corrects more errors, up to ⌊(N−1)/2⌋. " +
+      "In the instrument you can pick the type (bit or phase) and N, and each qubit has its own pentatonic " +
+      "voice that sings when it is hit or corrected — so the correction activity becomes a melody.",
     sims: [
       { id:"qec", title:"QEC · codice a 3 qubit", title_en:"QEC · 3-qubit code", file:"sim/qec.html",
         desc:"Stato entangled α|000⟩+β|111⟩, misura continua di Z₁Z₂ e Z₂Z₃, sindrome, correzione, rumore/flip manuali",

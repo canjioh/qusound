@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>QEC · codice a 3 qubit · qubit</title>
+<title>QEC · codice a ripetizione · qubit</title>
 <style>
   :root{color-scheme:dark;
     --bg:#0b0c0e;--panel:rgba(255,255,255,.028);--bd:#2a2e35;--bd2:#3a3f47;
@@ -12,7 +12,7 @@
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:13px/1.5 var(--sans);overflow:hidden}
   #app{display:flex;height:100%}
-  #panel{width:318px;flex:0 0 318px;padding:16px;overflow-y:auto;background:linear-gradient(180deg,rgba(20,22,26,.92),rgba(14,15,18,.92));border-right:1px solid var(--bd)}
+  #panel{width:320px;flex:0 0 320px;padding:16px;overflow-y:auto;background:linear-gradient(180deg,rgba(20,22,26,.92),rgba(14,15,18,.92));border-right:1px solid var(--bd)}
   #stage{flex:1;position:relative;min-width:0}
   canvas{display:block;width:100%;height:100%}
   h1{font-size:15px;margin:0 0 2px;font-weight:650}
@@ -23,13 +23,14 @@
   label{display:block;margin:9px 0 3px;color:var(--dim);font-size:12px} label:first-of-type{margin-top:0}
   .val{float:right;color:var(--ink);font-family:var(--mono);font-size:11px}
   input[type=range]{width:100%;accent-color:var(--amber);height:20px}
+  select{width:100%;padding:6px;background:#121226;color:var(--ink);border:1px solid var(--bd2);border-radius:8px;font:inherit;font-size:13px}
   button{padding:8px 4px;background:#151530;color:var(--ink);border:1px solid var(--bd2);border-radius:9px;cursor:pointer;font:inherit;font-size:12px}
   button:hover{background:#1d1d40}
   .transport{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:11px}
   #play{background:linear-gradient(180deg,#3a3f47,#20242a);color:var(--amber);font-weight:700}
   #corr.on{color:var(--z);border-color:var(--z)}
-  .flips{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
-  .flips button{color:var(--x);border-color:rgba(255,90,79,.4)}
+  #flips{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px}
+  #flips button{color:var(--x);border-color:rgba(255,90,79,.4);padding:7px 2px}
   #recaudiobtn.on{color:var(--x);border-color:var(--x)}
   .read{font:12px/1.7 var(--mono);color:var(--faint)} .read b{color:var(--psi)}
   a.back{position:absolute;top:12px;left:12px;padding:7px 13px;background:rgba(20,20,40,.6);color:var(--dim);border:1px solid var(--bd);border-radius:999px;text-decoration:none;font-size:13px;z-index:4}
@@ -52,18 +53,25 @@
 <body>
 <div id="app">
   <div id="panel">
-    <h1 id="h1">QEC · 3 qubit <span class="beta">beta</span></h1>
-    <p class="sub" data-t="sub">codice a ripetizione · sindrome · correzione</p>
+    <h1 id="h1">QEC · ripetizione <span class="beta">beta</span></h1>
+    <p class="sub" data-t="sub">codice a N qubit · sindrome · correzione</p>
     <div class="transport">
       <button id="play" class="on" data-t="audio">◉ Audio</button>
       <button id="corr" class="on">correzione: on</button>
     </div>
     <div class="card">
+      <h2 data-t="hcode">codice</h2>
+      <label data-t="ltype">tipo di codice</label>
+      <select id="ctype"><option value="bit">bit-flip · corregge X (stab. Z)</option><option value="phase">phase-flip · corregge Z (stab. X)</option></select>
+      <label data-t="lN">numero di qubit N <span class="val" id="vN">3</span></label>
+      <input type="range" id="N" min="3" max="7" step="2" value="3">
+    </div>
+    <div class="card">
       <h2 data-t="herr">errori</h2>
-      <label data-t="lnoise">rumore (X casuali) <span class="val" id="vnoise">0.30</span></label>
-      <input type="range" id="noise" min="0" max="1" step="0.01" value="0.3">
-      <label data-t="lflip">flip manuale (inietta un errore X)</label>
-      <div class="flips"><button id="f0">X₁</button><button id="f1">X₂</button><button id="f2">X₃</button></div>
+      <label data-t="lnoise">rumore (errori casuali) <span class="val" id="vnoise">0.25</span></label>
+      <input type="range" id="noise" min="0" max="1" step="0.01" value="0.25">
+      <label data-t="lflip">flip manuale (inietta un errore)</label>
+      <div id="flips"></div>
     </div>
     <div class="card">
       <h2 data-t="hcyc">ciclo &amp; suono</h2>
@@ -82,7 +90,7 @@
     <a class="back" href="../" data-t="back">← spiegazione del modello</a>
     <button id="lang">EN</button>
     <canvas id="cv"></canvas>
-    <div id="hint"><span data-t="hint">▶ premi <b>Audio</b>. Tre qubit codificano UN qubit logico entangled; misuro di continuo Z₁Z₂ e Z₂Z₃ (parità, non i singoli qubit) e correggo. La melodia logica sopravvive agli errori.</span></div>
+    <div id="hint"><span data-t="hint">▶ premi <b>Audio</b>. N qubit codificano UN qubit logico entangled; misuro di continuo gli stabilizzatori (parità di coppie, non i singoli qubit) e correggo. La melodia logica sopravvive.</span></div>
   </div>
 </div>
 <script>
@@ -90,46 +98,63 @@
 "use strict";
 var LANG=(function(){try{return localStorage.getItem('qlang')||'it';}catch(e){return 'it';}})();
 var STR={
- it:{sub:"codice a ripetizione · sindrome · correzione",audio:"◉ Audio",herr:"errori",lnoise:"rumore (X casuali)",
-   lflip:"flip manuale (inietta un errore X)",hcyc:"ciclo & suono",lcyc:"ciclo di misura",lspeed:"velocità (qubit logico)",lvol:"volume",
-   back:"← spiegazione del modello",keyhelpL:"tasti",keyhelp:'<b>spazio</b> Audio · <b>c</b> correzione on/off · <b>1 2 3</b> flip un qubit',
-   hint:'▶ premi <b>Audio</b>. Tre qubit codificano UN qubit logico entangled; misuro di continuo Z₁Z₂ e Z₂Z₃ (parità, non i singoli qubit) e correggo. La melodia logica sopravvive agli errori.',
+ it:{sub:"codice a N qubit · sindrome · correzione",audio:"◉ Audio",hcode:"codice",ltype:"tipo di codice",lN:"numero di qubit N",
+   herr:"errori",lnoise:"rumore (errori casuali)",lflip:"flip manuale (inietta un errore)",hcyc:"ciclo & suono",lcyc:"ciclo di misura",lspeed:"velocità (qubit logico)",lvol:"volume",
+   back:"← spiegazione del modello",keyhelpL:"tasti",keyhelp:'<b>spazio</b> Audio · <b>c</b> correzione on/off · <b>1…'+'7</b> flip un qubit · <b>t</b> bit/phase',
+   hint:'▶ premi <b>Audio</b>. N qubit codificano UN qubit logico entangled; misuro di continuo gli stabilizzatori (parità di coppie, non i singoli qubit) e correggo. La melodia logica sopravvive.',
    logico:"qubit logico",fed:"fedeltà",sind:"sindrome",corr:"correzione",on:"on",off:"off",noerr:"nessun errore",
-   detq:"errore sul qubit",lerr:"ERRORE LOGICO",cyc:"cicli",corrN:"corretti"},
- en:{sub:"repetition code · syndrome · correction",audio:"◉ Audio",herr:"errors",lnoise:"noise (random X)",
-   lflip:"manual flip (inject an X error)",hcyc:"cycle & sound",lcyc:"measurement cycle",lspeed:"speed (logical qubit)",lvol:"volume",
-   back:"← model explanation",keyhelpL:"keys",keyhelp:'<b>space</b> Audio · <b>c</b> correction on/off · <b>1 2 3</b> flip a qubit',
-   hint:'▶ press <b>Audio</b>. Three qubits encode ONE entangled logical qubit; I keep measuring Z₁Z₂ and Z₂Z₃ (parity, not the single qubits) and correct. The logical melody survives the errors.',
+   detq:"errore rilevato",lerr:"ERRORE LOGICO",cyc:"cicli",corrN:"corretti",protetto:"gli stabilizzatori leggono solo la PARITÀ → l'informazione logica resta protetta"},
+ en:{sub:"N-qubit code · syndrome · correction",audio:"◉ Audio",hcode:"code",ltype:"code type",lN:"number of qubits N",
+   herr:"errors",lnoise:"noise (random errors)",lflip:"manual flip (inject an error)",hcyc:"cycle & sound",lcyc:"measurement cycle",lspeed:"speed (logical qubit)",lvol:"volume",
+   back:"← model explanation",keyhelpL:"keys",keyhelp:'<b>space</b> Audio · <b>c</b> correction on/off · <b>1…'+'7</b> flip a qubit · <b>t</b> bit/phase',
+   hint:'▶ press <b>Audio</b>. N qubits encode ONE entangled logical qubit; I keep measuring the stabilizers (pair parities, not the single qubits) and correct. The logical melody survives.',
    logico:"logical qubit",fed:"fidelity",sind:"syndrome",corr:"correction",on:"on",off:"off",noerr:"no error",
-   detq:"error on qubit",lerr:"LOGICAL ERROR",cyc:"cycles",corrN:"corrected"}
+   detq:"error detected",lerr:"LOGICAL ERROR",cyc:"cycles",corrN:"corrected",protetto:"the stabilizers read only PARITY → the logical information stays protected"}
 };
 function T(k){return (STR[LANG]&&STR[LANG][k]!=null)?STR[LANG][k]:STR.it[k];}
 function applyLang(){document.querySelectorAll('[data-t]').forEach(function(n){var k=n.getAttribute('data-t');if(STR[LANG][k]==null)return;
   var v=n.querySelector('.val');if(v){n.textContent=STR[LANG][k]+' ';n.appendChild(v);}else{n.innerHTML=STR[LANG][k];}});
   document.getElementById('lang').textContent=LANG==='it'?'EN':'IT';document.documentElement.lang=LANG;
   var cb=document.getElementById('corr');if(cb)cb.textContent=T('corr')+': '+(corrOn?T('on'):T('off'));}
-document.getElementById('lang').addEventListener('click',function(){LANG=LANG==='it'?'en':'it';try{localStorage.setItem('qlang',LANG);}catch(e){}applyLang();});
+document.getElementById('lang').addEventListener('click',function(){LANG=LANG==='it'?'en':'it';try{localStorage.setItem('qlang',LANG);}catch(e){}applyLang();buildFlips();});
 
-/* ===== 3-qubit bit-flip code. |ψ_L⟩ = α|000⟩ + β|111⟩. Stabilizers S1=Z1Z2, S2=Z2Z3 (0-indexed Z0Z1, Z1Z2).
-   These are MULTI-qubit parity checks: they detect X errors WITHOUT revealing/collapsing the logical qubit. ===== */
+/* ===== N-qubit repetition code. |ψ_L⟩ = α|0…0⟩ + β|1…1⟩ (entangled).
+   bit-flip: stabilizers Z_iZ_{i+1}, errors X;  phase-flip = the same conjugated by Hadamard: stab X_iX_{i+1}, errors Z.
+   Stabilizers are MULTI-qubit PARITY checks: they detect errors without collapsing the logical qubit. ===== */
+var N=3, DIM=8, codeType='bit', TH0=1.15;
 var re=new Float64Array(8), im=new Float64Array(8);
-var TH0=1.15;                                  // logical polar angle (both precesses AND is X-sensitive)
 function popc(x){var c=0;while(x){c+=x&1;x>>=1;}return c;}
-function encode(ph){for(var b=0;b<8;b++){re[b]=0;im[b]=0;}var a=Math.cos(TH0/2),bm=Math.sin(TH0/2);re[0]=a;re[7]=bm*Math.cos(ph);im[7]=bm*Math.sin(ph);}
-function normalize(){var s=0,b;for(b=0;b<8;b++)s+=re[b]*re[b]+im[b]*im[b];s=Math.sqrt(s)||1;for(b=0;b<8;b++){re[b]/=s;im[b]/=s;}}
-function applyX(i){var bit=1<<i,b;for(b=0;b<8;b++){if(b&bit)continue;var b1=b|bit;var tr=re[b];re[b]=re[b1];re[b1]=tr;var ti=im[b];im[b]=im[b1];im[b1]=ti;}}
-function logicalZrot(dphi){for(var b=0;b<8;b++){var z0=(b&1)?-1:1;var ang=-dphi/2*z0;var c=Math.cos(ang),s=Math.sin(ang);var r=re[b],ii=im[b];re[b]=r*c-ii*s;im[b]=r*s+ii*c;}}
-function measZ(mask){var pP=0,b;for(b=0;b<8;b++){if((popc(b&mask)&1)===0)pP+=re[b]*re[b]+im[b]*im[b];}
-  var out=(Math.random()<pP)?1:-1;for(b=0;b<8;b++){var keepP=((popc(b&mask)&1)===0);if((out===1)!==keepP){re[b]=0;im[b]=0;}}normalize();return out;}
-function logicalBloch(){var ar=re[0],ai=im[0],br=re[7],bi=im[7];var na=ar*ar+ai*ai,nb=br*br+bi*bi;
-  var z=na-nb,x=2*(ar*br+ai*bi),y=2*(ar*bi-ai*br),nrm=na+nb;if(nrm>1e-9){x/=nrm;y/=nrm;z/=nrm;}
-  return {x:x,y:y,z:z,r:Math.min(1,Math.sqrt(x*x+y*y+z*z)),codeP:nrm};}   // codeP = population still inside the code space
+function encode(ph){re=new Float64Array(DIM);im=new Float64Array(DIM);var a=Math.cos(TH0/2),bm=Math.sin(TH0/2);
+  re[0]=a;re[DIM-1]=bm*Math.cos(ph);im[DIM-1]=bm*Math.sin(ph); if(codeType==='phase')applyHall();}
+function normalize(){var s=0,b;for(b=0;b<DIM;b++)s+=re[b]*re[b]+im[b]*im[b];s=Math.sqrt(s)||1;for(b=0;b<DIM;b++){re[b]/=s;im[b]/=s;}}
+function applyX(i){var bit=1<<i,b;for(b=0;b<DIM;b++){if(b&bit)continue;var b1=b|bit;var t=re[b];re[b]=re[b1];re[b1]=t;t=im[b];im[b]=im[b1];im[b1]=t;}}
+function applyZ(i){var bit=1<<i,b;for(b=0;b<DIM;b++){if(b&bit){re[b]=-re[b];im[b]=-im[b];}}}
+function applyH(i){var bit=1<<i,s=Math.SQRT1_2,b;for(b=0;b<DIM;b++){if(b&bit)continue;var b1=b|bit;var r0=re[b],i0=im[b],r1=re[b1],i1=im[b1];
+  re[b]=(r0+r1)*s;im[b]=(i0+i1)*s;re[b1]=(r0-r1)*s;im[b1]=(i0-i1)*s;}}
+function applyHall(){for(var i=0;i<N;i++)applyH(i);}
+function zrot(i,ang){var bit=1<<i,b;for(b=0;b<DIM;b++){var sgn=(b&bit)?1:-1;var a=-ang/2*(-sgn);var c=Math.cos(a),s=Math.sin(a);var r=re[b],ii=im[b];re[b]=r*c-ii*s;im[b]=r*s+ii*c;}}
+function xrot(i,ang){var bit=1<<i,c=Math.cos(ang/2),s=Math.sin(ang/2),b;for(b=0;b<DIM;b++){if(b&bit)continue;var b1=b|bit;var r0=re[b],i0=im[b],r1=re[b1],i1=im[b1];
+  re[b]=c*r0+s*i1;im[b]=c*i0-s*r1;re[b1]=c*r1+s*i0;im[b1]=c*i1-s*r0;}}
+function measZ(mask){var pP=0,b;for(b=0;b<DIM;b++){if((popc(b&mask)&1)===0)pP+=re[b]*re[b]+im[b]*im[b];}
+  var out=(Math.random()<pP)?1:-1;for(b=0;b<DIM;b++){var keepP=((popc(b&mask)&1)===0);if((out===1)!==keepP){re[b]=0;im[b]=0;}}normalize();return out;}
+function measStab(i){var mask=(1<<i)|(1<<(i+1));if(codeType==='bit')return measZ(mask);applyH(i);applyH(i+1);var o=measZ(mask);applyH(i);applyH(i+1);return o;}
+function errorOp(i){if(codeType==='bit')applyX(i);else applyZ(i);}
+function logicalZrot(dphi){if(codeType==='bit')zrot(0,dphi);else xrot(0,dphi);}
+function logicalBloch(){var ar,ai,br,bi;
+  if(codeType==='phase'){var sr=re,si=im;re=re.slice();im=im.slice();applyHall();ar=re[0];ai=im[0];br=re[DIM-1];bi=im[DIM-1];re=sr;im=si;}
+  else{ar=re[0];ai=im[0];br=re[DIM-1];bi=im[DIM-1];}
+  var na=ar*ar+ai*ai,nb=br*br+bi*bi,z=na-nb,x=2*(ar*br+ai*bi),y=2*(ar*bi-ai*br),nr=na+nb;
+  if(nr>1e-9){x/=nr;y/=nr;z/=nr;}return {x:x,y:y,z:z,r:Math.min(1,Math.sqrt(x*x+y*y+z*z)),codeP:nr};}
+function decodeCorrect(syn){ // minimum-weight decoding of the 1D repetition code from the syndrome
+  var e=[0],i,w=0; for(i=0;i<N-1;i++)e.push(e[i]^(syn[i]<0?1:0)); for(i=0;i<N;i++)w+=e[i];
+  if(w>N/2){for(i=0;i<N;i++)e[i]^=1;}                 // pick the lower-weight correction (add logical if needed)
+  var flipped=[]; for(i=0;i<N;i++)if(e[i]){errorOp(i);flipped.push(i);} return flipped;}
 
-var P={noise:0.3,cyc:0.5,speed:0.45,vol:0.7};
-var corrOn=true, phi=0, _cyc=0, s1=1, s2=1, flash=[0,0,0], errFlash=0, nCyc=0, nCorr=0, lerrFlash=0, lastSynMsg='';
-encode(0);
+var P={noise:0.25,cyc:0.5,speed:0.45,vol:0.7};
+var corrOn=true, phi=0, _cyc=0, syn=[1,1], flash=[], errFlash=0, nCyc=0, nCorr=0, lerrFlash=0, lastMsg='', qhit=[];
+function reconfig(){DIM=1<<N;syn=[];for(var i=0;i<N-1;i++)syn.push(1);flash=[];qhit=[];for(i=0;i<N;i++){flash.push(0);qhit.push(0);}encode(0);phi=0;_cyc=0;nCyc=0;nCorr=0;buildFlips();}
 
-/* ---- audio: logical melody (survives) + cycle ticks/alerts + error glitch ---- */
+/* ---- audio: logical melody (survives) + a pentatonic voice per qubit (error/correction) + cycle ticks ---- */
 var AC=null,master,lead,leadG,pad=[],padG,started=false;
 var SCALE=[0,2,4,7,9], ROOT=196;
 function sfreq(d){var o=Math.floor(d/5),i=((d%5)+5)%5;return ROOT*Math.pow(2,o)*Math.pow(2,SCALE[i]/12);}
@@ -141,31 +166,26 @@ function initAudio(){ if(started)return;
   master.connect(comp);comp.connect(lim);lim.connect(AC.destination);
   lead=AC.createOscillator();lead.type='triangle';lead.frequency.value=sfreq(4);leadG=AC.createGain();leadG.gain.value=0;lead.connect(leadG);leadG.connect(master);lead.start();
   padG=AC.createGain();padG.gain.value=0;padG.connect(master);
-  for(var j=0;j<2;j++){var o=AC.createOscillator();o.type='sine';o.frequency.value=ROOT*(j?1.5:1);o.connect(padG);o.start();pad.push(o);}
+  for(var j=0;j<2;j++){var o=AC.createOscillator();o.type='sine';o.frequency.value=ROOT*(j?1.5:0.5);o.connect(padG);o.start();pad.push(o);}
   started=true;document.getElementById('hint').style.display='none';document.getElementById('play').classList.remove('on');
 }
-function noiseBuf(){var b=AC.createBuffer(1,Math.floor(AC.sampleRate*0.2),AC.sampleRate),d=b.getChannelData(0);for(var i=0;i<d.length;i++)d[i]=Math.random()*2-1;return b;}
-function glitch(){ if(!started)return;var t=AC.currentTime;var s=AC.createBufferSource();s.buffer=noiseBuf();var bp=AC.createBiquadFilter();bp.type='bandpass';bp.frequency.value=1400;bp.Q.value=1.5;
-  var g=AC.createGain();g.gain.setValueAtTime(0.35,t);g.gain.exponentialRampToValueAtTime(0.0006,t+0.09);s.connect(bp);bp.connect(g);g.connect(master);s.start(t);s.stop(t+0.1);}
-function tick(clean){ if(!started)return;var t=AC.currentTime;
-  if(clean){var o=AC.createOscillator();o.type='sine';o.frequency.value=1800;var g=AC.createGain();g.gain.setValueAtTime(0.09,t);g.gain.exponentialRampToValueAtTime(0.0005,t+0.04);o.connect(g);g.connect(master);o.start(t);o.stop(t+0.05);}
-  else{ [0,3].forEach(function(dg,k){var o=AC.createOscillator();o.type='triangle';o.frequency.value=sfreq(dg)*2;var g=AC.createGain();var tt=t+k*0.02;g.gain.setValueAtTime(0.0001,tt);g.gain.exponentialRampToValueAtTime(0.16,tt+0.005);g.gain.exponentialRampToValueAtTime(0.0006,tt+0.22);o.connect(g);g.connect(master);o.start(tt);o.stop(tt+0.24);}); }
-}
+function nbuf(){var b=AC.createBuffer(1,Math.floor(AC.sampleRate*0.2),AC.sampleRate),d=b.getChannelData(0);for(var i=0;i<d.length;i++)d[i]=Math.random()*2-1;return b;}
+function qvoice(i,corr){ if(!started)return;var t=AC.currentTime;var o=AC.createOscillator();o.type=corr?'triangle':'sawtooth';
+  o.frequency.value=sfreq(i+(corr?N:0));var g=AC.createGain();g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(corr?0.16:0.12,t+0.006);g.gain.exponentialRampToValueAtTime(0.0006,t+0.26);
+  var lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=corr?2600:1400;o.connect(lp);lp.connect(g);g.connect(master);o.start(t);o.stop(t+0.28);}
+function tick(clean){ if(!started)return;var t=AC.currentTime;var o=AC.createOscillator();o.type='sine';o.frequency.value=clean?1800:900;var g=AC.createGain();g.gain.setValueAtTime(clean?0.07:0.14,t);g.gain.exponentialRampToValueAtTime(0.0005,t+(clean?0.03:0.08));o.connect(g);g.connect(master);o.start(t);o.stop(t+0.1);}
+function glitch(){ if(!started)return;var t=AC.currentTime;var s=AC.createBufferSource();s.buffer=nbuf();var bp=AC.createBiquadFilter();bp.type='bandpass';bp.frequency.value=1500;bp.Q.value=1.5;var g=AC.createGain();g.gain.setValueAtTime(0.28,t);g.gain.exponentialRampToValueAtTime(0.0006,t+0.08);s.connect(bp);bp.connect(g);g.connect(master);s.start(t);s.stop(t+0.09);}
 function thud(){ if(!started)return;var t=AC.currentTime;var o=AC.createOscillator();o.type='sine';o.frequency.setValueAtTime(120,t);o.frequency.exponentialRampToValueAtTime(40,t+0.2);var g=AC.createGain();g.gain.setValueAtTime(0.6,t);g.gain.exponentialRampToValueAtTime(0.0006,t+0.4);o.connect(g);g.connect(master);o.start(t);o.stop(t+0.42);}
-function injectError(i){applyX(i);flash[i]=1;errFlash=1;glitch();}
+function injectErr(i){errorOp(i);flash[i]=1;errFlash=1;qhit[i]=1;qvoice(i,false);glitch();}
 
 function doCycle(){
-  s1=measZ(3); s2=measZ(6);                       // measure the two stabilizers (parity checks)
-  var q=-1; if(s1<0&&s2>0)q=0; else if(s1<0&&s2<0)q=1; else if(s1>0&&s2<0)q=2;
-  var detected=(s1<0||s2<0);
-  if(detected){ errFlash=1; lastSynMsg=T('detq')+' '+(q+1); } else lastSynMsg=T('noerr');
-  // fidelity BEFORE correction (against the ideal precessing logical state)
+  var i,detected=false; for(i=0;i<N-1;i++){syn[i]=measStab(i);if(syn[i]<0)detected=true;}
   var nx=Math.sin(TH0)*Math.cos(phi),ny=Math.sin(TH0)*Math.sin(phi),nz=Math.cos(TH0);
-  if(corrOn && q>=0) applyX(q);                    // decode + correct
-  var lb=logicalBloch(); var fid=(1+(lb.x*nx+lb.y*ny+lb.z*nz))/2;
-  if(fid<0.6){ lerrFlash=1; thud(); }              // a logical error slipped through
-  nCyc++; if(detected&&corrOn)nCorr++;
-  tick(!detected);
+  if(detected){errFlash=1;lastMsg=T('detq');} else lastMsg=T('noerr');
+  if(corrOn && detected){var fl=decodeCorrect(syn);for(i=0;i<fl.length;i++){flash[fl[i]]=1;qhit[fl[i]]=2;qvoice(fl[i],true);}}
+  var lb=logicalBloch();var fid=(1+(lb.x*nx+lb.y*ny+lb.z*nz))/2;
+  if(fid<0.6){lerrFlash=1;thud();}
+  nCyc++; if(detected&&corrOn)nCorr++; tick(!detected);
 }
 
 /* ---- canvas ---- */
@@ -175,35 +195,28 @@ addEventListener('resize',resize);
 function txt(s,x,y,col,f){ctx.fillStyle=col;ctx.font=(f||'12px')+' var(--mono)';ctx.fillText(s,x,y);}
 var last=performance.now();
 function render(now){var dt=Math.min(0.05,(now-last)/1000);last=now;
-  // logical precession (a genuine logical Z rotation: single-qubit Z0, commutes with the Z-stabilizers)
   var dph=(0.3+2.4*P.speed)*dt; phi+=dph; logicalZrot(dph);
-  // continuous noise: random X flips
-  for(var i=0;i<3;i++){ if(Math.random()<P.noise*dt*1.1){ injectError(i); } }
-  // QEC cycle
+  for(var i=0;i<N;i++){ if(Math.random()<P.noise*dt*0.9){ injectErr(i); } }
   _cyc+=dt; var cycT=0.18+(1-P.cyc)*1.4; if(_cyc>=cycT){ _cyc-=cycT; doCycle(); }
   var lb=logicalBloch();
-  // audio
   if(started){var tc=AC.currentTime;master.gain.setTargetAtTime(P.vol,tc,0.05);
     var h=lb.z+0.5*lb.x+0.3*lb.y; var fr=sfreq(4)*Math.pow(2,Math.round(h*7)/12);
-    lead.frequency.setTargetAtTime(fr,tc,0.05); leadG.gain.setTargetAtTime(0.16*lb.codeP,tc,0.05);
-    padG.gain.setTargetAtTime(0.05*lb.codeP,tc,0.1);}
-  flash[0]*=0.92;flash[1]*=0.92;flash[2]*=0.92;errFlash*=0.9;lerrFlash*=0.94;
+    lead.frequency.setTargetAtTime(fr,tc,0.05); leadG.gain.setTargetAtTime(0.15*lb.codeP,tc,0.05); padG.gain.setTargetAtTime(0.045*lb.codeP,tc,0.1);}
+  for(i=0;i<N;i++){flash[i]*=0.9;qhit[i]*=0.9;}errFlash*=0.9;lerrFlash*=0.94;
   // ---- draw ----
   ctx.clearRect(0,0,W,H2);
-  var pad0=Math.max(20,W*0.05);
-  // three physical qubits + two stabilizer links
-  var qy=H2*0.30, qx=[pad0+ (W*0.5-pad0)*0.16, pad0+(W*0.5-pad0)*0.5, pad0+(W*0.5-pad0)*0.84];
-  var syn=[s1,s2];
-  for(var l=0;l<2;l++){var a=qx[l],b=qx[l+1],bad=(syn[l]<0);
-    ctx.strokeStyle=bad?'rgba(255,90,79,.9)':'rgba(70,209,127,.7)';ctx.lineWidth=bad?3:2;ctx.beginPath();ctx.moveTo(a,qy);ctx.lineTo(b,qy);ctx.stroke();
-    var mx=(a+b)/2;ctx.fillStyle=bad?'#ff5a4f':'#46d17f';ctx.beginPath();ctx.arc(mx,qy-16,6,0,7);ctx.fill();
-    txt(l===0?'Z₁Z₂':'Z₂Z₃',mx-14,qy-24,bad?'#ff5a4f':'rgba(70,209,127,.85)','11px');}
-  for(var qq=0;qq<3;qq++){var fl=flash[qq];
-    ctx.shadowColor='#ff5a4f';ctx.shadowBlur=fl*22;ctx.fillStyle=fl>0.3?'#ff5a4f':'#5cc6ff';ctx.beginPath();ctx.arc(qx[qq],qy,10,0,7);ctx.fill();ctx.shadowBlur=0;
-    txt('q'+(qq+1),qx[qq]-8,qy+28,'rgba(160,168,200,.7)','11px');}
-  txt(T('sind')+' ('+(s1>0?'+':'−')+','+(s2>0?'+':'−')+')  ·  '+lastSynMsg, pad0, qy+56, errFlash>0.2?'#ff5a4f':'rgba(160,168,200,.8)');
-  // logical qubit Bloch sphere (the protected info)
-  var lx=W*0.76, ly=H2*0.5, R=Math.min(W*0.2,H2*0.34);
+  var pad0=Math.max(20,W*0.05), leftW=W*0.52, qy=H2*0.34;
+  var qx=[]; for(i=0;i<N;i++)qx.push(pad0+(leftW-2*pad0)*(N>1?i/(N-1):0.5));
+  for(var l=0;l<N-1;l++){var a=qx[l],b=qx[l+1],bad=(syn[l]<0);
+    ctx.strokeStyle=bad?'rgba(255,90,79,.9)':'rgba(70,209,127,.6)';ctx.lineWidth=bad?3:2;ctx.beginPath();ctx.moveTo(a,qy);ctx.lineTo(b,qy);ctx.stroke();
+    var mx=(a+b)/2;ctx.fillStyle=bad?'#ff5a4f':'#46d17f';ctx.beginPath();ctx.arc(mx,qy-15,5,0,7);ctx.fill();}
+  var slab=(codeType==='bit'?'Z':'X');
+  for(var q=0;q<N;q++){var fl=flash[q],hh=qhit[q];
+    ctx.shadowColor=hh>0.9?'#46d17f':'#ff5a4f';ctx.shadowBlur=Math.max(fl,hh>1?hh:0)*20;
+    ctx.fillStyle=fl>0.3?'#ff5a4f':(hh>0.9?'#8fe0a8':'#5cc6ff');ctx.beginPath();ctx.arc(qx[q],qy,Math.max(6,10-N*0.4),0,7);ctx.fill();ctx.shadowBlur=0;}
+  txt(T('sind')+': '+syn.map(function(s){return s>0?'+':'−';}).join(' ')+'   ('+slab+'-stab · '+lastMsg+')', pad0, qy+52, errFlash>0.2?'#ff5a4f':'rgba(160,168,200,.8)');
+  // logical qubit Bloch sphere
+  var lx=W*0.78, ly=H2*0.5, R=Math.min(W*0.18,H2*0.34);
   ctx.strokeStyle='rgba(170,178,230,.4)';ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(lx,ly,R,0,7);ctx.stroke();
   ctx.strokeStyle='rgba(140,150,225,.5)';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(lx,ly,R,R*0.34,0,0,7);ctx.stroke();
   var vx=lx+lb.x*R*0.9, vy=ly-lb.z*R*0.9-lb.y*R*0.28;
@@ -213,16 +226,17 @@ function render(now){var dt=Math.min(0.05,(now-last)/1000);last=now;
   if(lerrFlash>0.25){txt(T('lerr'),lx-R*0.4,ly-R-10,'rgba(255,90,79,'+lerrFlash.toFixed(2)+')','700 15px');}
   var nx2=Math.sin(TH0)*Math.cos(phi),ny2=Math.sin(TH0)*Math.sin(phi),nz2=Math.cos(TH0);
   var fid=(1+(lb.x*nx2+lb.y*ny2+lb.z*nz2))/2*lb.codeP;
-  document.getElementById('readout').innerHTML=T('corr')+': <b>'+(corrOn?T('on'):T('off'))+'</b> · '+T('cyc')+' <b>'+nCyc+'</b> · '+T('corrN')+' <b>'+nCorr+'</b><br>'+T('fed')+' logica: <b>'+(fid*100).toFixed(0)+'%</b><br><span style="color:var(--faint)">Z₁Z₂ e Z₂Z₃ leggono la PARITÀ, mai il singolo qubit → l\'informazione logica resta protetta</span>';
+  document.getElementById('readout').innerHTML=(codeType==='bit'?'bit-flip':'phase-flip')+' · N=<b>'+N+'</b> · '+T('corr')+' <b>'+(corrOn?T('on'):T('off'))+'</b><br>'+T('cyc')+' <b>'+nCyc+'</b> · '+T('corrN')+' <b>'+nCorr+'</b> · '+T('fed')+' <b>'+(fid*100).toFixed(0)+'%</b><br><span style="color:var(--faint)">'+T('protetto')+'</span>';
   requestAnimationFrame(render);
 }
 
 function $(id){return document.getElementById(id);}
+function buildFlips(){var h=$('flips');if(!h)return;h.innerHTML='';var op=(codeType==='bit')?'X':'Z';
+  for(var i=0;i<N;i++){(function(i){var btn=document.createElement('button');btn.textContent=op+(i+1);btn.onclick=function(){if(!started)initAudio();injectErr(i);};h.appendChild(btn);})(i);}}
 $('play').onclick=function(){if(!started)initAudio();else if(AC.state==='suspended')AC.resume();};
 $('corr').onclick=function(){corrOn=!corrOn;this.classList.toggle('on',corrOn);this.textContent=T('corr')+': '+(corrOn?T('on'):T('off'));};
-$('f0').onclick=function(){if(!started)initAudio();injectError(0);};
-$('f1').onclick=function(){if(!started)initAudio();injectError(1);};
-$('f2').onclick=function(){if(!started)initAudio();injectError(2);};
+$('ctype').onchange=function(){codeType=this.value;reconfig();};
+$('N').oninput=function(){N=parseInt(this.value,10);$('vN').textContent=N;reconfig();};
 function rng(id,vid,key,dec){var s=$(id);s.oninput=function(){var v=parseFloat(s.value);P[key]=v;$(vid).textContent=dec!=null?v.toFixed(dec):Math.round(v);if(key==='vol'&&master)master.gain.setTargetAtTime(v,AC.currentTime,0.03);};}
 rng('noise','vnoise','noise',2);rng('cyc','vcyc','cyc',2);rng('speed','vspeed','speed',2);rng('vol','vvol','vol',1);
 /* ---- REC AUDIO (m4a / AAC, fallback webm-opus) ---- */
@@ -239,9 +253,10 @@ rng('noise','vnoise','noise',2);rng('cyc','vcyc','cyc',2);rng('speed','vspeed','
       b.textContent=DEF;b.classList.remove('on');};
     rec.start(200);b.textContent='■ STOP';b.classList.add('on');};})();
 addEventListener('keydown',function(e){var k=e.key.toLowerCase();var tg=(e.target&&e.target.tagName)||'';if(tg==='INPUT'||tg==='SELECT')return;
-  if(k==='c'){$('corr').click();return;} if(k==='1'){$('f0').click();return;} if(k==='2'){$('f1').click();return;} if(k==='3'){$('f2').click();return;}
+  if(k==='c'){$('corr').click();return;} if(k==='t'){$('ctype').value=(codeType==='bit'?'phase':'bit');$('ctype').dispatchEvent(new Event('change'));return;}
+  if(/^[1-7]$/.test(k)){var i=parseInt(k,10)-1;if(i<N){if(!started)initAudio();injectErr(i);}return;}
   if(k===' '){e.preventDefault();$('play').click();return;}});
-applyLang();resize();requestAnimationFrame(render);
+reconfig();applyLang();resize();requestAnimationFrame(render);
 })();
 </script>
 </body>
