@@ -79,6 +79,8 @@
       <input type="range" id="cyc" min="0" max="1" step="0.01" value="0.5">
       <label data-t="lspeed">velocità (qubit logico) <span class="val" id="vspeed">0.45</span></label>
       <input type="range" id="speed" min="0" max="1" step="0.01" value="0.45">
+      <label data-t="ltfield">campo trasverso (armonia) <span class="val" id="vtfield">0.25</span></label>
+      <input type="range" id="tfield" min="0" max="1" step="0.01" value="0.25">
       <label data-t="lvol">volume <span class="val" id="vvol">0.7</span></label>
       <input type="range" id="vol" min="0" max="1" step="0.01" value="0.7">
     </div>
@@ -99,14 +101,14 @@
 var LANG=(function(){try{return localStorage.getItem('qlang')||'it';}catch(e){return 'it';}})();
 var STR={
  it:{sub:"codice a N qubit · sindrome · correzione",audio:"◉ Audio",hcode:"codice",ltype:"tipo di codice",lN:"numero di qubit N",
-   herr:"errori",lnoise:"rumore (errori casuali)",lflip:"flip manuale (inietta un errore)",hcyc:"ciclo & suono",lcyc:"ciclo di misura",lspeed:"velocità (qubit logico)",lvol:"volume",
-   back:"← spiegazione del modello",keyhelpL:"tasti",keyhelp:'<b>spazio</b> Audio · <b>c</b> correzione on/off · <b>1…'+'7</b> flip un qubit · <b>t</b> bit/phase',
+   herr:"errori",lnoise:"rumore (errori casuali)",lflip:"flip manuale (inietta un errore)",hcyc:"ciclo & suono",lcyc:"ciclo di misura",lspeed:"velocità (qubit logico)",ltfield:"campo trasverso (armonia)",lvol:"volume",
+   back:"← spiegazione del modello",keyhelpL:"tasti",keyhelp:'<b>spazio</b> Audio · <b>c</b> correzione · <b>t</b> bit/phase · <b>1…'+'6</b> misura uno stabilizzatore (flip errore: coi pulsanti)',measd:"misurato",
    hint:'▶ premi <b>Audio</b>. N qubit codificano UN qubit logico entangled; misuro di continuo gli stabilizzatori (parità di coppie, non i singoli qubit) e correggo. La melodia logica sopravvive.',
    logico:"qubit logico",fed:"fedeltà",sind:"sindrome",corr:"correzione",on:"on",off:"off",noerr:"nessun errore",
    detq:"errore rilevato",lerr:"ERRORE LOGICO",cyc:"cicli",corrN:"corretti",protetto:"gli stabilizzatori leggono solo la PARITÀ → l'informazione logica resta protetta"},
  en:{sub:"N-qubit code · syndrome · correction",audio:"◉ Audio",hcode:"code",ltype:"code type",lN:"number of qubits N",
-   herr:"errors",lnoise:"noise (random errors)",lflip:"manual flip (inject an error)",hcyc:"cycle & sound",lcyc:"measurement cycle",lspeed:"speed (logical qubit)",lvol:"volume",
-   back:"← model explanation",keyhelpL:"keys",keyhelp:'<b>space</b> Audio · <b>c</b> correction on/off · <b>1…'+'7</b> flip a qubit · <b>t</b> bit/phase',
+   herr:"errors",lnoise:"noise (random errors)",lflip:"manual flip (inject an error)",hcyc:"cycle & sound",lcyc:"measurement cycle",lspeed:"speed (logical qubit)",ltfield:"transverse field (harmony)",lvol:"volume",
+   back:"← model explanation",keyhelpL:"keys",keyhelp:'<b>space</b> Audio · <b>c</b> correction · <b>t</b> bit/phase · <b>1…'+'6</b> measure a stabilizer (error flip: use the buttons)',measd:"measured",
    hint:'▶ press <b>Audio</b>. N qubits encode ONE entangled logical qubit; I keep measuring the stabilizers (pair parities, not the single qubits) and correct. The logical melody survives.',
    logico:"logical qubit",fed:"fidelity",sind:"syndrome",corr:"correction",on:"on",off:"off",noerr:"no error",
    detq:"error detected",lerr:"LOGICAL ERROR",cyc:"cycles",corrN:"corrected",protetto:"the stabilizers read only PARITY → the logical information stays protected"}
@@ -122,10 +124,11 @@ document.getElementById('lang').addEventListener('click',function(){LANG=LANG===
    bit-flip: stabilizers Z_iZ_{i+1}, errors X;  phase-flip = the same conjugated by Hadamard: stab X_iX_{i+1}, errors Z.
    Stabilizers are MULTI-qubit PARITY checks: they detect errors without collapsing the logical qubit. ===== */
 var N=3, DIM=8, codeType='bit', TH0=1.15;
-var re=new Float64Array(8), im=new Float64Array(8);
+var re=new Float64Array(8), im=new Float64Array(8), ire=new Float64Array(8), iim=new Float64Array(8);
 function popc(x){var c=0;while(x){c+=x&1;x>>=1;}return c;}
 function encode(ph){re=new Float64Array(DIM);im=new Float64Array(DIM);var a=Math.cos(TH0/2),bm=Math.sin(TH0/2);
-  re[0]=a;re[DIM-1]=bm*Math.cos(ph);im[DIM-1]=bm*Math.sin(ph); if(codeType==='phase')applyHall();}
+  re[0]=a;re[DIM-1]=bm*Math.cos(ph);im[DIM-1]=bm*Math.sin(ph); if(codeType==='phase')applyHall();
+  ire=re.slice();iim=im.slice();}   // the IDEAL logical qubit (no errors) evolves in parallel, for fidelity
 function normalize(){var s=0,b;for(b=0;b<DIM;b++)s+=re[b]*re[b]+im[b]*im[b];s=Math.sqrt(s)||1;for(b=0;b<DIM;b++){re[b]/=s;im[b]/=s;}}
 function applyX(i){var bit=1<<i,b;for(b=0;b<DIM;b++){if(b&bit)continue;var b1=b|bit;var t=re[b];re[b]=re[b1];re[b1]=t;t=im[b];im[b]=im[b1];im[b1]=t;}}
 function applyZ(i){var bit=1<<i,b;for(b=0;b<DIM;b++){if(b&bit){re[b]=-re[b];im[b]=-im[b];}}}
@@ -139,20 +142,29 @@ function measZ(mask){var pP=0,b;for(b=0;b<DIM;b++){if((popc(b&mask)&1)===0)pP+=r
   var out=(Math.random()<pP)?1:-1;for(b=0;b<DIM;b++){var keepP=((popc(b&mask)&1)===0);if((out===1)!==keepP){re[b]=0;im[b]=0;}}normalize();return out;}
 function measStab(i){var mask=(1<<i)|(1<<(i+1));if(codeType==='bit')return measZ(mask);applyH(i);applyH(i+1);var o=measZ(mask);applyH(i);applyH(i+1);return o;}
 function errorOp(i){if(codeType==='bit')applyX(i);else applyZ(i);}
-function logicalZrot(dphi){if(codeType==='bit')zrot(0,dphi);else xrot(0,dphi);}
-function logicalBloch(){var ar,ai,br,bi;
+function logicalZrot(dphi){if(codeType==='bit')zrot(0,dphi);else xrot(0,dphi);}   // logical Z field
+function logicalXrot(ang){   // TRANSVERSE logical field (logical X): bit -> X_all (flip all), phase -> Z_all (phase by parity)
+  var c,s,b;
+  if(codeType==='bit'){c=Math.cos(ang/2);s=Math.sin(ang/2);var all=DIM-1;for(b=0;b<DIM;b++){var b2=b^all;if(b<b2){var r0=re[b],i0=im[b],r1=re[b2],i1=im[b2];re[b]=c*r0+s*i1;im[b]=c*i0-s*r1;re[b2]=c*r1+s*i0;im[b2]=c*i1-s*r0;}}}
+  else{for(b=0;b<DIM;b++){var eig=(popc(b)&1)?-1:1;var a=-ang/2*eig;c=Math.cos(a);s=Math.sin(a);var r=re[b],ii=im[b];re[b]=r*c-ii*s;im[b]=r*s+ii*c;}}}
+function evolveLogical(dz,dx){   // apply the logical field to BOTH the real and the ideal registers (logical unitary, commutes with the stabilizers)
+  logicalZrot(dz); if(dx)logicalXrot(dx);
+  var sr=re,si=im; re=ire;im=iim; logicalZrot(dz); if(dx)logicalXrot(dx); re=sr;im=si; }
+function blochOf(){var ar,ai,br,bi;
   if(codeType==='phase'){var sr=re,si=im;re=re.slice();im=im.slice();applyHall();ar=re[0];ai=im[0];br=re[DIM-1];bi=im[DIM-1];re=sr;im=si;}
   else{ar=re[0];ai=im[0];br=re[DIM-1];bi=im[DIM-1];}
   var na=ar*ar+ai*ai,nb=br*br+bi*bi,z=na-nb,x=2*(ar*br+ai*bi),y=2*(ar*bi-ai*br),nr=na+nb;
   if(nr>1e-9){x/=nr;y/=nr;z/=nr;}return {x:x,y:y,z:z,r:Math.min(1,Math.sqrt(x*x+y*y+z*z)),codeP:nr};}
+function logicalBloch(){return blochOf();}
+function idealBloch(){var sr=re,si=im;re=ire;im=iim;var lb=blochOf();re=sr;im=si;return lb;}
 function decodeCorrect(syn){ // minimum-weight decoding of the 1D repetition code from the syndrome
   var e=[0],i,w=0; for(i=0;i<N-1;i++)e.push(e[i]^(syn[i]<0?1:0)); for(i=0;i<N;i++)w+=e[i];
   if(w>N/2){for(i=0;i<N;i++)e[i]^=1;}                 // pick the lower-weight correction (add logical if needed)
   var flipped=[]; for(i=0;i<N;i++)if(e[i]){errorOp(i);flipped.push(i);} return flipped;}
 
-var P={noise:0.25,cyc:0.5,speed:0.45,vol:0.7};
-var corrOn=true, phi=0, _cyc=0, syn=[1,1], flash=[], errFlash=0, nCyc=0, nCorr=0, lerrFlash=0, lastMsg='', qhit=[];
-function reconfig(){DIM=1<<N;syn=[];for(var i=0;i<N-1;i++)syn.push(1);flash=[];qhit=[];for(i=0;i<N;i++){flash.push(0);qhit.push(0);}encode(0);phi=0;_cyc=0;nCyc=0;nCorr=0;buildFlips();}
+var P={noise:0.25,cyc:0.5,speed:0.45,tfield:0.25,vol:0.7};
+var corrOn=true, _cyc=0, syn=[1,1], flash=[], errFlash=0, nCyc=0, nCorr=0, lerrFlash=0, lastMsg='', qhit=[];
+function reconfig(){DIM=1<<N;syn=[];for(var i=0;i<N-1;i++)syn.push(1);flash=[];qhit=[];for(i=0;i<N;i++){flash.push(0);qhit.push(0);}encode(0);_cyc=0;nCyc=0;nCorr=0;buildFlips();}
 
 /* ---- audio: logical melody (survives) + a pentatonic voice per qubit (error/correction) + cycle ticks ---- */
 var AC=null,master,lead,leadG,pad=[],padG,started=false;
@@ -181,13 +193,20 @@ function pluck(deg,vel,bright,when){ if(!started)return;var t=when||AC.currentTi
 function tick(clean){ if(!started||!clean)return;var t=AC.currentTime;var o=AC.createOscillator();o.type='sine';o.frequency.value=sfreq(11);var g=AC.createGain();g.gain.setValueAtTime(0.03,t);g.gain.exponentialRampToValueAtTime(0.0004,t+0.05);o.connect(g);g.connect(master);o.start(t);o.stop(t+0.06);}   // faint shimmer on a clean cycle
 function lowNote(){ if(!started)return;var t=AC.currentTime;var o=AC.createOscillator();o.type='triangle';o.frequency.value=sfreq(0)/2;var o2=AC.createOscillator();o2.type='sine';o2.frequency.value=sfreq(0);var lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=800;var g=AC.createGain();g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.24,t+0.01);g.gain.exponentialRampToValueAtTime(0.0006,t+0.7);o.connect(lp);o2.connect(lp);lp.connect(g);g.connect(master);o.start(t);o2.start(t);o.stop(t+0.75);o2.stop(t+0.75);}
 function injectErr(i){errorOp(i);flash[i]=1;errFlash=1;qhit[i]=1;pluck(i,0.5,false);}
+// manual measurement of stabilizer i (numeric keys): extracts that parity bit and SOUNDS it, pentatonically
+function measStabSound(i){ if(i<0||i>=N-1)return; if(!started){initAudio();} var o=measStab(i); syn[i]=o; errFlash=1;
+  lastMsg=(codeType==='bit'?'Z':'X')+'-'+T('sind')+' '+(i+1)+' '+T('measd')+' = '+(o>0?'+':'−');
+  if(o>0){ pluck(2+i,0.5,true); }                              // +1: bright consonant note
+  else { pluck(i,0.5,false); pluck(i,0.32,false,AC.currentTime+0.09); } }   // -1: a lower muted double-pluck (error)
 
 function doCycle(){
   var i,detected=false; for(i=0;i<N-1;i++){syn[i]=measStab(i);if(syn[i]<0)detected=true;}
-  var nx=Math.sin(TH0)*Math.cos(phi),ny=Math.sin(TH0)*Math.sin(phi),nz=Math.cos(TH0);
+  var id=idealBloch();
   if(detected){errFlash=1;lastMsg=T('detq');} else lastMsg=T('noerr');
-  if(corrOn && detected){var fl=decodeCorrect(syn);for(i=0;i<fl.length;i++){flash[fl[i]]=1;qhit[fl[i]]=2;pluck(fl[i],0.5,true,AC.currentTime+i*0.05);}}   // gentle correction arpeggio
-  var lb=logicalBloch();var fid=(1+(lb.x*nx+lb.y*ny+lb.z*nz))/2;
+  if(corrOn && detected){var fl=decodeCorrect(syn);fl.sort(function(a,b){return a-b;});
+    for(i=0;i<fl.length;i++){flash[fl[i]]=1;qhit[fl[i]]=2;pluck(fl[i],0.5,true,AC.currentTime+i*0.06);}   // ascending correction arpeggio
+    var rt=AC.currentTime+fl.length*0.06+0.03; pluck(0,0.30,true,rt);pluck(2,0.28,true,rt+0.02);pluck(4,0.26,true,rt+0.04);}   // resolve on a soft pentatonic chord
+  var lb=logicalBloch();var fid=(1+(lb.x*id.x+lb.y*id.y+lb.z*id.z))/2;
   if(fid<0.6){lerrFlash=1;lowNote();}
   nCyc++; if(detected&&corrOn)nCorr++; tick(!detected);
 }
@@ -199,7 +218,7 @@ addEventListener('resize',resize);
 function txt(s,x,y,col,f){ctx.fillStyle=col;ctx.font=(f||'12px')+' var(--mono)';ctx.fillText(s,x,y);}
 var last=performance.now();
 function render(now){var dt=Math.min(0.05,(now-last)/1000);last=now;
-  var dph=(0.3+2.4*P.speed)*dt; phi+=dph; logicalZrot(dph);
+  var dz=(0.3+2.4*P.speed)*dt, dx=P.tfield*(0.4+1.7*P.speed)*dt; evolveLogical(dz,dx);   // logical Z field + transverse X field
   for(var i=0;i<N;i++){ if(Math.random()<P.noise*dt*0.9){ injectErr(i); } }
   _cyc+=dt; var cycT=0.18+(1-P.cyc)*1.4; if(_cyc>=cycT){ _cyc-=cycT; doCycle(); }
   var lb=logicalBloch();
@@ -228,8 +247,7 @@ function render(now){var dt=Math.min(0.05,(now-last)/1000);last=now;
   ctx.beginPath();ctx.arc(vx,vy,6,0,7);ctx.fillStyle='#fff';ctx.fill();ctx.shadowBlur=0;
   txt(T('logico'),lx-R*0.5,ly+R+26,'rgba(255,176,0,.85)');
   if(lerrFlash>0.25){txt(T('lerr'),lx-R*0.4,ly-R-10,'rgba(255,90,79,'+lerrFlash.toFixed(2)+')','700 15px');}
-  var nx2=Math.sin(TH0)*Math.cos(phi),ny2=Math.sin(TH0)*Math.sin(phi),nz2=Math.cos(TH0);
-  var fid=(1+(lb.x*nx2+lb.y*ny2+lb.z*nz2))/2*lb.codeP;
+  var id2=idealBloch(); var fid=(1+(lb.x*id2.x+lb.y*id2.y+lb.z*id2.z))/2*lb.codeP;
   document.getElementById('readout').innerHTML=(codeType==='bit'?'bit-flip':'phase-flip')+' · N=<b>'+N+'</b> · '+T('corr')+' <b>'+(corrOn?T('on'):T('off'))+'</b><br>'+T('cyc')+' <b>'+nCyc+'</b> · '+T('corrN')+' <b>'+nCorr+'</b> · '+T('fed')+' <b>'+(fid*100).toFixed(0)+'%</b><br><span style="color:var(--faint)">'+T('protetto')+'</span>';
   requestAnimationFrame(render);
 }
@@ -242,7 +260,7 @@ $('corr').onclick=function(){corrOn=!corrOn;this.classList.toggle('on',corrOn);t
 $('ctype').onchange=function(){codeType=this.value;reconfig();};
 $('N').oninput=function(){N=parseInt(this.value,10);$('vN').textContent=N;reconfig();};
 function rng(id,vid,key,dec){var s=$(id);s.oninput=function(){var v=parseFloat(s.value);P[key]=v;$(vid).textContent=dec!=null?v.toFixed(dec):Math.round(v);if(key==='vol'&&master)master.gain.setTargetAtTime(v,AC.currentTime,0.03);};}
-rng('noise','vnoise','noise',2);rng('cyc','vcyc','cyc',2);rng('speed','vspeed','speed',2);rng('vol','vvol','vol',1);
+rng('noise','vnoise','noise',2);rng('cyc','vcyc','cyc',2);rng('speed','vspeed','speed',2);rng('tfield','vtfield','tfield',2);rng('vol','vvol','vol',1);
 /* ---- REC AUDIO (m4a / AAC, fallback webm-opus) ---- */
 (function(){var b=$('recaudiobtn');if(!b)return;var rec=null,chunks=[],dest=null,DEF='● REC audio · m4a';
   function rmime(){var L=['audio/mp4;codecs=mp4a.40.2','audio/mp4','audio/webm;codecs=opus','audio/webm'];for(var i=0;i<L.length;i++){try{if(window.MediaRecorder&&MediaRecorder.isTypeSupported(L[i]))return L[i];}catch(e){}}return '';}
@@ -258,7 +276,7 @@ rng('noise','vnoise','noise',2);rng('cyc','vcyc','cyc',2);rng('speed','vspeed','
     rec.start(200);b.textContent='■ STOP';b.classList.add('on');};})();
 addEventListener('keydown',function(e){var k=e.key.toLowerCase();var tg=(e.target&&e.target.tagName)||'';if(tg==='INPUT'||tg==='SELECT')return;
   if(k==='c'){$('corr').click();return;} if(k==='t'){$('ctype').value=(codeType==='bit'?'phase':'bit');$('ctype').dispatchEvent(new Event('change'));return;}
-  if(/^[1-7]$/.test(k)){var i=parseInt(k,10)-1;if(i<N){if(!started)initAudio();injectErr(i);}return;}
+  if(/^[1-9]$/.test(k)){var si=parseInt(k,10)-1;if(si<N-1){measStabSound(si);}return;}   // numeric keys MEASURE the stabilizers
   if(k===' '){e.preventDefault();$('play').click();return;}});
 reconfig();applyLang();resize();requestAnimationFrame(render);
 })();
