@@ -450,27 +450,36 @@ window.PROJECTS = [
     qtags: ["Stabilizzatori","psi:Sindrome & correzione","hz:Osservabili multi-qubit"],
     qtags_en: ["Stabilizers","psi:Syndrome & correction","hz:Multi-qubit observables"],
     principle:
-      "La correzione d'errore quantistica codifica UN qubit logico in uno stato <b>entangled</b> di più " +
-      "qubit e poi ne misura di continuo alcuni <b>stabilizzatori</b>: osservabili di PARITÀ su più " +
-      "qubit (mai sul singolo qubit), che rivelano se è avvenuto un errore SENZA leggere l'informazione " +
-      "logica. La sindrome dice quale errore, e tu correggi: l'informazione sopravvive.",
+      "Non puoi correggere un errore quantistico come in un computer classico: <b>leggere</b> i qubit li " +
+      "farebbe collassare, distruggendo l'informazione. Il trucco: codifichi UN qubit logico in uno stato " +
+      "<b>entangled</b> di più qubit fisici e misuri solo dei <b>controlli di parità</b> — gli " +
+      "<b>stabilizzatori</b>, osservabili su più qubit — che chiedono «i vicini sono d'accordo?» senza mai " +
+      "rivelare il valore logico. Se qualcosa non torna (la <b>sindrome</b>) sai dov'è l'errore, lo " +
+      "correggi, e l'informazione sopravvive intatta.",
     principle_en:
-      "Quantum error correction encodes ONE logical qubit in an <b>entangled</b> state of several " +
-      "qubits and then keeps measuring some <b>stabilizers</b>: multi-qubit PARITY observables (never a " +
-      "single qubit), which reveal whether an error occurred WITHOUT reading the logical information. " +
-      "The syndrome tells which error, and you correct it: the information survives.",
+      "You cannot fix a quantum error the classical way: <b>reading</b> the qubits would collapse them and " +
+      "destroy the information. The trick: you encode ONE logical qubit in an <b>entangled</b> state of " +
+      "several physical qubits and measure only <b>parity checks</b> — the <b>stabilizers</b>, multi-qubit " +
+      "observables — that ask 'do the neighbours agree?' without ever revealing the logical value. If " +
+      "something is off (the <b>syndrome</b>) you know where the error is, you correct it, and the " +
+      "information survives intact.",
     abstract:
-      "Il codice a ripetizione a 3 qubit protegge un qubit logico dai bit-flip. Lo stato logico " +
-      "α|000⟩ + β|111⟩ è entangled; misurando le parità Z₁Z₂ e Z₂Z₃ scopri se e dove un qubit si è " +
-      "capovolto, e lo raddrizzi. Qui la melodia è il qubit logico: attraversa gli errori senza " +
-      "cambiare, finché la correzione tiene il passo. Spegni la correzione, o alza troppo il rumore, e " +
-      "la senti degradare: è la soglia della QEC resa suono.",
+      "Il codice a ripetizione protegge un qubit logico spargendone la struttura su più qubit fisici. Con " +
+      "3 qubit lo stato logico è α|000⟩ + β|111⟩, entangled: non è che ogni qubit «sia» 0 o 1, ma che " +
+      "insieme concordano. Misurando le parità di coppie vicine (Z₁Z₂, Z₂Z₃) scopri se e dove uno si è " +
+      "capovolto — senza mai sapere se era 0 o 1 — e lo raddrizzi. Qui la melodia è il qubit logico: " +
+      "attraversa gli errori senza cambiare, finché la correzione tiene il passo. Spegni la correzione o " +
+      "alza il rumore e la senti degradare: è la soglia della QEC resa suono. Puoi passare al codice di " +
+      "FASE (protegge dagli errori di fase invece che di bit) e aumentare N per correggere più errori.",
     abstract_en:
-      "The 3-qubit repetition code protects a logical qubit from bit-flips. The logical state " +
-      "α|000⟩ + β|111⟩ is entangled; measuring the parities Z₁Z₂ and Z₂Z₃ reveals whether and where a " +
-      "qubit flipped, and you straighten it. Here the melody is the logical qubit: it passes through the " +
-      "errors unchanged as long as correction keeps up. Turn correction off, or raise the noise too far, " +
-      "and you hear it degrade: the QEC threshold turned into sound.",
+      "The repetition code protects a logical qubit by spreading its structure over several physical " +
+      "qubits. With 3 qubits the logical state is α|000⟩ + β|111⟩, entangled: it is not that each qubit " +
+      "'is' 0 or 1, but that together they agree. Measuring the parities of neighbouring pairs (Z₁Z₂, " +
+      "Z₂Z₃) reveals whether and where one flipped — without ever knowing if it was 0 or 1 — and you " +
+      "straighten it. Here the melody is the logical qubit: it passes through the errors unchanged as " +
+      "long as correction keeps up. Turn correction off or raise the noise and you hear it degrade: the " +
+      "QEC threshold turned into sound. You can switch to the PHASE code (protecting against phase errors " +
+      "instead of bit errors) and raise N to correct more errors.",
     math:
       "Un qubit logico è codificato in tre qubit fisici: |0⟩_L = |000⟩, |1⟩_L = |111⟩, quindi lo stato " +
       "generale è |ψ⟩_L = α|000⟩ + β|111⟩, uno stato ENTANGLED. Il codice è definito dai suoi " +

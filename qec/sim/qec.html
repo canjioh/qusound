@@ -170,21 +170,25 @@ function initAudio(){ if(started)return;
   started=true;document.getElementById('hint').style.display='none';document.getElementById('play').classList.remove('on');
 }
 function nbuf(){var b=AC.createBuffer(1,Math.floor(AC.sampleRate*0.2),AC.sampleRate),d=b.getChannelData(0);for(var i=0;i<d.length;i++)d[i]=Math.random()*2-1;return b;}
-function qvoice(i,corr){ if(!started)return;var t=AC.currentTime;var o=AC.createOscillator();o.type=corr?'triangle':'sawtooth';
-  o.frequency.value=sfreq(i+(corr?N:0));var g=AC.createGain();g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(corr?0.16:0.12,t+0.006);g.gain.exponentialRampToValueAtTime(0.0006,t+0.26);
-  var lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=corr?2600:1400;o.connect(lp);lp.connect(g);g.connect(master);o.start(t);o.stop(t+0.28);}
-function tick(clean){ if(!started)return;var t=AC.currentTime;var o=AC.createOscillator();o.type='sine';o.frequency.value=clean?1800:900;var g=AC.createGain();g.gain.setValueAtTime(clean?0.07:0.14,t);g.gain.exponentialRampToValueAtTime(0.0005,t+(clean?0.03:0.08));o.connect(g);g.connect(master);o.start(t);o.stop(t+0.1);}
-function glitch(){ if(!started)return;var t=AC.currentTime;var s=AC.createBufferSource();s.buffer=nbuf();var bp=AC.createBiquadFilter();bp.type='bandpass';bp.frequency.value=1500;bp.Q.value=1.5;var g=AC.createGain();g.gain.setValueAtTime(0.28,t);g.gain.exponentialRampToValueAtTime(0.0006,t+0.08);s.connect(bp);bp.connect(g);g.connect(master);s.start(t);s.stop(t+0.09);}
-function thud(){ if(!started)return;var t=AC.currentTime;var o=AC.createOscillator();o.type='sine';o.frequency.setValueAtTime(120,t);o.frequency.exponentialRampToValueAtTime(40,t+0.2);var g=AC.createGain();g.gain.setValueAtTime(0.6,t);g.gain.exponentialRampToValueAtTime(0.0006,t+0.4);o.connect(g);g.connect(master);o.start(t);o.stop(t+0.42);}
-function injectErr(i){errorOp(i);flash[i]=1;errFlash=1;qhit[i]=1;qvoice(i,false);glitch();}
+// soft pentatonic pluck (kalimba-like). Lead + every qubit voice share ONE scale -> no dissonance is possible;
+// an error is a MUTED pluck of that qubit's note, a correction the SAME note but BRIGHT (call & answer, no glitch).
+function pluck(deg,vel,bright,when){ if(!started)return;var t=when||AC.currentTime;
+  var o=AC.createOscillator();o.type='sine';o.frequency.value=sfreq(deg);
+  var o2=AC.createOscillator();o2.type='triangle';o2.frequency.value=sfreq(deg)*2;var g2=AC.createGain();g2.gain.value=bright?0.4:0.16;o2.connect(g2);
+  var lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=bright?3000:1600;
+  var g=AC.createGain();g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.11*vel,t+0.008);g.gain.exponentialRampToValueAtTime(0.0005,t+0.5);
+  o.connect(lp);g2.connect(lp);lp.connect(g);g.connect(master);o.start(t);o2.start(t);o.stop(t+0.55);o2.stop(t+0.55);}
+function tick(clean){ if(!started||!clean)return;var t=AC.currentTime;var o=AC.createOscillator();o.type='sine';o.frequency.value=sfreq(11);var g=AC.createGain();g.gain.setValueAtTime(0.03,t);g.gain.exponentialRampToValueAtTime(0.0004,t+0.05);o.connect(g);g.connect(master);o.start(t);o.stop(t+0.06);}   // faint shimmer on a clean cycle
+function lowNote(){ if(!started)return;var t=AC.currentTime;var o=AC.createOscillator();o.type='triangle';o.frequency.value=sfreq(0)/2;var o2=AC.createOscillator();o2.type='sine';o2.frequency.value=sfreq(0);var lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=800;var g=AC.createGain();g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.24,t+0.01);g.gain.exponentialRampToValueAtTime(0.0006,t+0.7);o.connect(lp);o2.connect(lp);lp.connect(g);g.connect(master);o.start(t);o2.start(t);o.stop(t+0.75);o2.stop(t+0.75);}
+function injectErr(i){errorOp(i);flash[i]=1;errFlash=1;qhit[i]=1;pluck(i,0.5,false);}
 
 function doCycle(){
   var i,detected=false; for(i=0;i<N-1;i++){syn[i]=measStab(i);if(syn[i]<0)detected=true;}
   var nx=Math.sin(TH0)*Math.cos(phi),ny=Math.sin(TH0)*Math.sin(phi),nz=Math.cos(TH0);
   if(detected){errFlash=1;lastMsg=T('detq');} else lastMsg=T('noerr');
-  if(corrOn && detected){var fl=decodeCorrect(syn);for(i=0;i<fl.length;i++){flash[fl[i]]=1;qhit[fl[i]]=2;qvoice(fl[i],true);}}
+  if(corrOn && detected){var fl=decodeCorrect(syn);for(i=0;i<fl.length;i++){flash[fl[i]]=1;qhit[fl[i]]=2;pluck(fl[i],0.5,true,AC.currentTime+i*0.05);}}   // gentle correction arpeggio
   var lb=logicalBloch();var fid=(1+(lb.x*nx+lb.y*ny+lb.z*nz))/2;
-  if(fid<0.6){lerrFlash=1;thud();}
+  if(fid<0.6){lerrFlash=1;lowNote();}
   nCyc++; if(detected&&corrOn)nCorr++; tick(!detected);
 }
 
@@ -200,8 +204,8 @@ function render(now){var dt=Math.min(0.05,(now-last)/1000);last=now;
   _cyc+=dt; var cycT=0.18+(1-P.cyc)*1.4; if(_cyc>=cycT){ _cyc-=cycT; doCycle(); }
   var lb=logicalBloch();
   if(started){var tc=AC.currentTime;master.gain.setTargetAtTime(P.vol,tc,0.05);
-    var h=lb.z+0.5*lb.x+0.3*lb.y; var fr=sfreq(4)*Math.pow(2,Math.round(h*7)/12);
-    lead.frequency.setTargetAtTime(fr,tc,0.05); leadG.gain.setTargetAtTime(0.15*lb.codeP,tc,0.05); padG.gain.setTargetAtTime(0.045*lb.codeP,tc,0.1);}
+    var h=lb.z+0.5*lb.x+0.3*lb.y; var fr=sfreq(4+Math.round(h*3));           // lead snapped to the SAME pentatonic scale
+    lead.frequency.setTargetAtTime(fr,tc,0.06); leadG.gain.setTargetAtTime(0.15*lb.codeP,tc,0.05); padG.gain.setTargetAtTime(0.05*lb.codeP,tc,0.1);}
   for(i=0;i<N;i++){flash[i]*=0.9;qhit[i]*=0.9;}errFlash*=0.9;lerrFlash*=0.94;
   // ---- draw ----
   ctx.clearRect(0,0,W,H2);
