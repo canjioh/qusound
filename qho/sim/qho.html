@@ -34,9 +34,11 @@
   button:hover{background:#1d1d40}
   #recaudiobtn.on{color:var(--x);border-color:var(--x)}
   #rhythmbtn.on{color:var(--z);border-color:var(--z)}
-  .transport{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:11px}
+  .transport{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:11px}
   .presets{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px}
   #play{background:linear-gradient(180deg,#3a3f47,#20242a);color:var(--amber);font-weight:700}
+  #play.on{background:#16181c;color:var(--ink);border:1px solid var(--bd2)}   /* grigio = fermo; arancione = attivo */
+  #pause.on{color:var(--amber);border-color:var(--amber)}
   .read{font:12px/1.7 var(--mono);color:var(--faint)} .read b{color:var(--psi)}
   a.back{position:absolute;top:12px;left:12px;padding:7px 13px;background:rgba(20,20,40,.6);color:var(--dim);border:1px solid var(--bd);border-radius:999px;text-decoration:none;font-size:13px;z-index:4}
   a.back:hover{color:var(--ink)}
@@ -59,6 +61,7 @@
     <p class="sub" data-t="sub">stati di Fock, coerenti · n quanti = n-esima armonica</p>
     <div class="transport">
       <button id="play" class="on" data-t="audio">◉ Audio</button>
+      <button id="pause">⏸ Pausa</button>
       <button id="ground" data-t="ground">stato |0⟩</button>
     </div>
     <div class="kh">? <span data-t="keyhelpL">tasti</span><div class="khtip" data-t="keyhelp"></div></div>
@@ -121,7 +124,7 @@ var STR={
 function T(k){return (STR[LANG]&&STR[LANG][k]!=null)?STR[LANG][k]:STR.it[k];}
 function applyLang(){document.querySelectorAll('[data-t]').forEach(function(n){var k=n.getAttribute('data-t');if(STR[LANG][k]==null)return;
   var v=n.querySelector('.val');if(v){n.textContent=STR[LANG][k]+' ';n.appendChild(v);}else{n.innerHTML=STR[LANG][k];}});
-  document.getElementById('lang').textContent=LANG==='it'?'EN':'IT';document.documentElement.lang=LANG;if(window.__rhyLab)window.__rhyLab();}
+  document.getElementById('lang').textContent=LANG==='it'?'EN':'IT';document.documentElement.lang=LANG;if(window.__rhyLab)window.__rhyLab();if(window.__pauseLab)window.__pauseLab();}
 document.getElementById('lang').addEventListener('click',function(){LANG=LANG==='it'?'en':'it';try{localStorage.setItem('qlang',LANG);}catch(e){}applyLang();});
 var NF=6;                                  // Fock states n = 0..5
 var amp=[1,0,0,0,0,0];                      // |c_n| (unnormalised); phases assumed 0
@@ -175,7 +178,7 @@ function resize(){var r=cv.getBoundingClientRect();W=r.width;H2=r.height;DPR=Mat
   cv.width=Math.round(W*DPR)&~1;cv.height=Math.round(H2*DPR)&~1;ctx.setTransform(DPR,0,0,DPR,0,0);}
 addEventListener('resize',resize);
 var last=performance.now();
-function render(now){var dt=Math.min(0.05,(now-last)/1000);last=now;
+function render(now){var dt=Math.min(0.05,(now-last)/1000);last=now;if(paused)dt=0;
   tt+=dt*P.speed*3*P.om;
   ctx.clearRect(0,0,W,H2);
   var midY=H2*0.60, sx=W/(2*XL), x2p=function(x){return W/2+x*sx;};
@@ -221,7 +224,13 @@ function $(id){return document.getElementById(id);}
 })(n);} })();
 function refreshSliders(){for(var n=0;n<NF;n++){$('c'+n).value=amp[n];$('vc'+n).textContent=amp[n].toFixed(2);}}
 for(var n=0;n<NF;n++){(function(n){$('c'+n).oninput=function(){amp[n]=parseFloat(this.value);norm();refreshSliders();updateAudio();};})(n);}
-$('play').onclick=function(){if(!started)initAudio();else if(AC.state==='suspended')AC.resume();};
+$('play').onclick=function(){if(!started)initAudio();else if(AC.state==='suspended'&&!paused)AC.resume();};
+// ---- pausa generale: congela evoluzione + audio, riprende pulito ----
+var paused=false;
+(function(){var pb=$('pause');
+  function lab(){pb.textContent=paused?(LANG==='it'?'▶ Riprendi':'▶ Resume'):(LANG==='it'?'⏸ Pausa':'⏸ Pause');}
+  pb.onclick=function(){paused=!paused;pb.classList.toggle('on',paused);if(AC){if(paused)AC.suspend();else AC.resume();}lab();};
+  window.__pauseLab=lab;lab();})();
 $('ground').onclick=function(){amp=[1,0,0,0,0,0];norm();refreshSliders();updateAudio();};
 $('pcoh').onclick=function(){var al=1.4;$('alpha').value=al;$('valpha').textContent=al.toFixed(2);for(var i=0;i<NF;i++)amp[i]=Math.exp(-al*al/2)*Math.pow(al,i)/Math.sqrt(fact(i));norm();refreshSliders();updateAudio();};
 $('alpha').oninput=function(){var al=parseFloat(this.value);$('valpha').textContent=al.toFixed(2);for(var i=0;i<NF;i++)amp[i]=Math.exp(-al*al/2)*Math.pow(al,i)/Math.sqrt(fact(i));norm();refreshSliders();updateAudio();};

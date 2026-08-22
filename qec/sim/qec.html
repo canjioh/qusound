@@ -28,6 +28,9 @@
   button:hover{background:#1d1d40}
   .transport{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:11px}
   #play{background:linear-gradient(180deg,#3a3f47,#20242a);color:var(--amber);font-weight:700}
+  #play.on{background:#16181c;color:var(--ink);border:1px solid var(--bd2)}   /* grigio = fermo; arancione = attivo */
+  #pause.on{color:var(--amber);border-color:var(--amber)}
+  #corr{grid-column:1/-1}
   #corr.on{color:var(--z);border-color:var(--z)}
   #flips{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px}
   #flips button{color:var(--x);border-color:rgba(255,90,79,.4);padding:7px 2px}
@@ -57,6 +60,7 @@
     <p class="sub" data-t="sub">codice a N qubit · sindrome · correzione</p>
     <div class="transport">
       <button id="play" class="on" data-t="audio">◉ Audio</button>
+      <button id="pause">⏸ Pausa</button>
       <button id="corr" class="on">correzione: on</button>
     </div>
     <div class="card">
@@ -117,7 +121,8 @@ function T(k){return (STR[LANG]&&STR[LANG][k]!=null)?STR[LANG][k]:STR.it[k];}
 function applyLang(){document.querySelectorAll('[data-t]').forEach(function(n){var k=n.getAttribute('data-t');if(STR[LANG][k]==null)return;
   var v=n.querySelector('.val');if(v){n.textContent=STR[LANG][k]+' ';n.appendChild(v);}else{n.innerHTML=STR[LANG][k];}});
   document.getElementById('lang').textContent=LANG==='it'?'EN':'IT';document.documentElement.lang=LANG;
-  var cb=document.getElementById('corr');if(cb)cb.textContent=T('corr')+': '+(corrOn?T('on'):T('off'));}
+  var cb=document.getElementById('corr');if(cb)cb.textContent=T('corr')+': '+(corrOn?T('on'):T('off'));
+  if(window.__pauseLab)window.__pauseLab();}
 document.getElementById('lang').addEventListener('click',function(){LANG=LANG==='it'?'en':'it';try{localStorage.setItem('qlang',LANG);}catch(e){}applyLang();buildFlips();});
 
 /* ===== N-qubit repetition code. |ψ_L⟩ = α|0…0⟩ + β|1…1⟩ (entangled).
@@ -179,6 +184,7 @@ function initAudio(){ if(started)return;
   lead=AC.createOscillator();lead.type='triangle';lead.frequency.value=sfreq(4);leadG=AC.createGain();leadG.gain.value=0;lead.connect(leadG);leadG.connect(master);lead.start();
   padG=AC.createGain();padG.gain.value=0;padG.connect(master);
   for(var j=0;j<2;j++){var o=AC.createOscillator();o.type='sine';o.frequency.value=ROOT*(j?1.5:0.5);o.connect(padG);o.start();pad.push(o);}
+  try{if(AC.state==='suspended')AC.resume();}catch(e){}   // some browsers create the context suspended -> force it to run
   started=true;document.getElementById('hint').style.display='none';document.getElementById('play').classList.remove('on');
 }
 function nbuf(){var b=AC.createBuffer(1,Math.floor(AC.sampleRate*0.2),AC.sampleRate),d=b.getChannelData(0);for(var i=0;i<d.length;i++)d[i]=Math.random()*2-1;return b;}
@@ -218,9 +224,11 @@ addEventListener('resize',resize);
 function txt(s,x,y,col,f){ctx.fillStyle=col;ctx.font=(f||'12px')+' var(--mono)';ctx.fillText(s,x,y);}
 var last=performance.now();
 function render(now){var dt=Math.min(0.05,(now-last)/1000);last=now;
-  var dz=(0.3+2.4*P.speed)*dt, dx=P.tfield*(0.4+1.7*P.speed)*dt; evolveLogical(dz,dx);   // logical Z field + transverse X field
-  for(var i=0;i<N;i++){ if(Math.random()<P.noise*dt*0.9){ injectErr(i); } }
-  _cyc+=dt; var cycT=0.18+(1-P.cyc)*1.4; if(_cyc>=cycT){ _cyc-=cycT; doCycle(); }
+  if(!paused){
+    var dz=(0.3+2.4*P.speed)*dt, dx=P.tfield*(0.4+1.7*P.speed)*dt; evolveLogical(dz,dx);   // logical Z field + transverse X field
+    for(var i=0;i<N;i++){ if(Math.random()<P.noise*dt*0.9){ injectErr(i); } }
+    _cyc+=dt; var cycT=0.18+(1-P.cyc)*1.4; if(_cyc>=cycT){ _cyc-=cycT; doCycle(); }
+  }
   var lb=logicalBloch();
   if(started){var tc=AC.currentTime;master.gain.setTargetAtTime(P.vol,tc,0.05);
     var h=lb.z+0.5*lb.x+0.3*lb.y; var fr=sfreq(4+Math.round(h*3));           // lead snapped to the SAME pentatonic scale
@@ -255,7 +263,13 @@ function render(now){var dt=Math.min(0.05,(now-last)/1000);last=now;
 function $(id){return document.getElementById(id);}
 function buildFlips(){var h=$('flips');if(!h)return;h.innerHTML='';var op=(codeType==='bit')?'X':'Z';
   for(var i=0;i<N;i++){(function(i){var btn=document.createElement('button');btn.textContent=op+(i+1);btn.onclick=function(){if(!started)initAudio();injectErr(i);};h.appendChild(btn);})(i);}}
-$('play').onclick=function(){if(!started)initAudio();else if(AC.state==='suspended')AC.resume();};
+$('play').onclick=function(){if(!started)initAudio();else if(AC.state==='suspended'&&!paused)AC.resume();};
+// ---- pausa generale: congela evoluzione + audio, riprende pulito (come negli altri strumenti) ----
+var paused=false;
+(function(){var pb=$('pause');
+  function lab(){pb.textContent=paused?(LANG==='it'?'▶ Riprendi':'▶ Resume'):(LANG==='it'?'⏸ Pausa':'⏸ Pause');}
+  pb.onclick=function(){paused=!paused;pb.classList.toggle('on',paused);if(AC){if(paused)AC.suspend();else AC.resume();}lab();};
+  window.__pauseLab=lab;lab();})();
 $('corr').onclick=function(){corrOn=!corrOn;this.classList.toggle('on',corrOn);this.textContent=T('corr')+': '+(corrOn?T('on'):T('off'));};
 $('ctype').onchange=function(){codeType=this.value;reconfig();};
 $('N').oninput=function(){N=parseInt(this.value,10);$('vN').textContent=N;reconfig();};

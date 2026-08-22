@@ -28,8 +28,10 @@
   button:hover{background:#1d1d40}
   #recaudiobtn.on{color:var(--x);border-color:var(--x)}
   #rhythmbtn.on{color:var(--z);border-color:var(--z)}
-  .transport{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:11px}
+  .transport{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:11px}
   #play{background:linear-gradient(180deg,#3a3f47,#20242a);color:var(--amber);font-weight:700}
+  #play.on{background:#16181c;color:var(--ink);border:1px solid var(--bd2)}   /* grigio = fermo; arancione = attivo */
+  #pause.on{color:var(--amber);border-color:var(--amber)}
   .read{font:12px/1.7 var(--mono);color:var(--faint)} .read b{color:var(--psi)}
   .qnote{color:var(--faint);font-size:11px;line-height:1.5;margin-top:8px;border-left:2px solid var(--bd2);padding-left:8px}
   .qnote b{color:var(--psi)}
@@ -57,6 +59,7 @@
     <p class="sub" data-t="sub">atomo + cavità · collasso e rinascita</p>
     <div class="transport">
       <button id="play" class="on" data-t="audio">◉ Audio</button>
+      <button id="pause">⏸ Pausa</button>
       <button id="reset" data-t="reset">reset t=0</button>
     </div>
     <div class="kh">? <span data-t="keyhelpL">tasti</span><div class="khtip" data-t="keyhelp"></div></div>
@@ -121,7 +124,7 @@ var STR={
 function T(k){return (STR[LANG]&&STR[LANG][k]!=null)?STR[LANG][k]:STR.it[k];}
 function applyLang(){document.querySelectorAll('[data-t]').forEach(function(n){var k=n.getAttribute('data-t');if(STR[LANG][k]==null)return;
   var v=n.querySelector('.val');if(v){n.textContent=STR[LANG][k]+' ';n.appendChild(v);}else{n.innerHTML=STR[LANG][k];}});
-  document.getElementById('lang').textContent=LANG==='it'?'EN':'IT';document.documentElement.lang=LANG;if(window.__rhyLab)window.__rhyLab();}
+  document.getElementById('lang').textContent=LANG==='it'?'EN':'IT';document.documentElement.lang=LANG;if(window.__rhyLab)window.__rhyLab();if(window.__pauseLab)window.__pauseLab();}
 document.getElementById('lang').addEventListener('click',function(){LANG=LANG==='it'?'en':'it';try{localStorage.setItem('qlang',LANG);}catch(e){}applyLang();});
 
 var P={nbar:8,g:1,det:0,speed:0.45,vol:0.7,wave:'triangle',cut:1400,spread:1};
@@ -184,10 +187,10 @@ function resize(){var r=cv.getBoundingClientRect();W=r.width;H2=r.height;DPR=Mat
 addEventListener('resize',resize);
 function txt(s,x,y,col,f){ctx.fillStyle=col;ctx.font=(f||'12px')+' var(--mono)';ctx.fillText(s,x,y);}
 var last=performance.now();
-function render(now){var dt=Math.min(0.05,(now-last)/1000);last=now;
+function render(now){var dt=Math.min(0.05,(now-last)/1000);last=now;if(paused)dt=0;
   t+=dt*P.speed*6;
   var pe=Pe(t), Wv=2*pe-1, nph=P.nbar+1-pe;
-  hist.push(Wv); var maxh=Math.max(120,Math.floor(W)); if(hist.length>maxh)hist.shift();
+  if(!paused){hist.push(Wv); var maxh=Math.max(120,Math.floor(W)); if(hist.length>maxh)hist.shift();}
   updateAudio(pe);
   if(started && _pePrev<0.72 && pe>=0.72 && (AC.currentTime-_lastPulse)>0.09){ pulse(); if(percOn)tom(120,0.9); _lastPulse=AC.currentTime; }
   _pePrev=pe;
@@ -228,7 +231,13 @@ function render(now){var dt=Math.min(0.05,(now-last)/1000);last=now;
 }
 
 function $(id){return document.getElementById(id);}
-$('play').onclick=function(){if(!started)initAudio();else if(AC.state==='suspended')AC.resume();};
+$('play').onclick=function(){if(!started)initAudio();else if(AC.state==='suspended'&&!paused)AC.resume();};
+// ---- pausa generale: congela evoluzione + audio, riprende pulito ----
+var paused=false;
+(function(){var pb=$('pause');
+  function lab(){pb.textContent=paused?(LANG==='it'?'▶ Riprendi':'▶ Resume'):(LANG==='it'?'⏸ Pausa':'⏸ Pause');}
+  pb.onclick=function(){paused=!paused;pb.classList.toggle('on',paused);if(AC){if(paused)AC.suspend();else AC.resume();}lab();};
+  window.__pauseLab=lab;lab();})();
 $('reset').onclick=function(){t=0;hist.length=0;};
 function rng(id,vid,key,dec){var s=$(id);s.oninput=function(){var v=parseFloat(s.value);P[key]=v;$(vid).textContent=dec!=null?v.toFixed(dec):Math.round(v);
   if(key==='nbar'||key==='spread')dist();if(key==='vol'&&master)master.gain.setTargetAtTime(v,AC.currentTime,0.03);};}

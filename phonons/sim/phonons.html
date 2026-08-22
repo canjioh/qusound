@@ -26,8 +26,10 @@
   input[type=range]{width:100%;accent-color:var(--amber);height:20px}
   button{padding:8px 4px;background:#151530;color:var(--ink);border:1px solid var(--bd2);border-radius:9px;cursor:pointer;font:inherit;font-size:12px}
   button:hover{background:#1d1d40}
-  .transport{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:11px}
+  .transport{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:11px}
   #play{background:linear-gradient(180deg,#3a3f47,#20242a);color:var(--amber);font-weight:700}
+  #play.on{background:#16181c;color:var(--ink);border:1px solid var(--bd2)}   /* grigio = fermo; arancione = attivo */
+  #pause.on{color:var(--amber);border-color:var(--amber)}
   #pluck{color:var(--psi);border-color:var(--psi)}
   #autopluck.on{color:var(--psi);border-color:var(--psi)}
   #recaudiobtn.on{color:var(--x);border-color:var(--x)}
@@ -57,6 +59,7 @@
     <p class="sub" data-t="sub">catena di oscillatori accoppiati · modi normali</p>
     <div class="transport">
       <button id="play" class="on" data-t="audio">◉ Audio</button>
+      <button id="pause">⏸ Pausa</button>
       <button id="pluck" data-t="pluck">pizzica</button>
     </div>
     <div class="kh">? <span data-t="keyhelpL">tasti</span><div class="khtip" data-t="keyhelp"></div></div>
@@ -111,7 +114,7 @@ var STR={
 function T(k){return (STR[LANG]&&STR[LANG][k]!=null)?STR[LANG][k]:STR.it[k];}
 function applyLang(){document.querySelectorAll('[data-t]').forEach(function(n){var k=n.getAttribute('data-t');if(STR[LANG][k]==null)return;
   var v=n.querySelector('.val');if(v){n.textContent=STR[LANG][k]+' ';n.appendChild(v);}else{n.innerHTML=STR[LANG][k];}});
-  document.getElementById('lang').textContent=LANG==='it'?'EN':'IT';document.documentElement.lang=LANG;if(window.__apLab)window.__apLab();if(window.__rhyLab)window.__rhyLab();}
+  document.getElementById('lang').textContent=LANG==='it'?'EN':'IT';document.documentElement.lang=LANG;if(window.__apLab)window.__apLab();if(window.__rhyLab)window.__rhyLab();if(window.__pauseLab)window.__pauseLab();}
 document.getElementById('lang').addEventListener('click',function(){LANG=LANG==='it'?'en':'it';try{localStorage.setItem('qlang',LANG);}catch(e){}applyLang();});
 
 var P={N:10,stiff:1,pos:5,decay:0.35,vol:0.7,rate:0.5};
@@ -161,7 +164,7 @@ function resize(){var r=cv.getBoundingClientRect();W=r.width;H2=r.height;DPR=Mat
 addEventListener('resize',resize);
 function txt(s,x,y,col,f){ctx.fillStyle=col;ctx.font=(f||'12px')+' var(--mono)';ctx.fillText(s,x,y);}
 var last=performance.now();
-function render(now){var dt=Math.min(0.05,(now-last)/1000);last=now;
+function render(now){var dt=Math.min(0.05,(now-last)/1000);last=now;if(paused)dt=0;
   if(autoOn&&started){ _pt+=dt; if(_pt>=interval()){ pluck(_apos); _pt=0;   // auto-pluck walks the chain -> a phonon arpeggio
     _apos+=_adir; if(_apos>=P.N){_apos=P.N;_adir=-1;} if(_apos<=1){_apos=1;_adir=1;} } }
   if(plucked)t+=dt*2.4;
@@ -190,7 +193,13 @@ function render(now){var dt=Math.min(0.05,(now-last)/1000);last=now;
 }
 
 function $(id){return document.getElementById(id);}
-$('play').onclick=function(){if(!started){initAudio();pluck();}else if(AC.state==='suspended')AC.resume();};
+$('play').onclick=function(){if(!started){initAudio();pluck();}else if(AC.state==='suspended'&&!paused)AC.resume();};
+// ---- pausa generale: congela evoluzione + audio, riprende pulito ----
+var paused=false;
+(function(){var pb=$('pause');
+  function lab(){pb.textContent=paused?(LANG==='it'?'▶ Riprendi':'▶ Resume'):(LANG==='it'?'⏸ Pausa':'⏸ Pause');}
+  pb.onclick=function(){paused=!paused;pb.classList.toggle('on',paused);if(AC){if(paused)AC.suspend();else AC.resume();}lab();};
+  window.__pauseLab=lab;lab();})();
 $('pluck').onclick=function(){if(!started)initAudio();pluck();};
 (function(){var ab=$('autopluck');function apLab(){ab.textContent=autoOn?T('apOn'):T('apOff');}
   ab.onclick=function(){autoOn=!autoOn;ab.classList.toggle('on',autoOn);apLab();if(autoOn&&!started)initAudio();_pt=1e9;};
