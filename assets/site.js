@@ -12,7 +12,7 @@
                standby:['standby','STANDBY','led--standby'],
                wip:['wip','WIP','led--wip'] };
 
-  var LANG = (function(){ try{ return localStorage.getItem('qlang')||'it'; }catch(e){ return 'it'; } })();
+  var LANG = (function(){ try{ return localStorage.getItem('qlang')||'en'; }catch(e){ return 'en'; } })();
   var CURRENT = null;
 
   var UI = {
