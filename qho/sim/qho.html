@@ -34,6 +34,7 @@
   button:hover{background:#1d1d40}
   #recaudiobtn.on{color:var(--x);border-color:var(--x)}
   #rhythmbtn.on{color:var(--z);border-color:var(--z)}
+  #firebtn.on{color:var(--amber);border-color:var(--amber)}
   .transport{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:11px}
   .presets{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px}
   #play{background:linear-gradient(180deg,#3a3f47,#20242a);color:var(--amber);font-weight:700}
@@ -93,6 +94,9 @@
       <button id="rhythmbtn" style="width:100%;margin-top:8px">ritmo: off</button>
       <label data-t="lrhyvol">volume ritmo <span class="val" id="vrhyvol">0.80</span></label>
       <input type="range" id="rhyvol" min="0" max="1.5" step="0.01" value="0.8">
+      <button id="firebtn" data-t="fire" style="width:100%;margin-top:8px">🔥 fuoco</button>
+      <label data-t="lfirevol">volume fuoco <span class="val" id="vfirevol">0.50</span></label>
+      <input type="range" id="firevol" min="0" max="1" step="0.01" value="0.5">
     </div>
     <div class="card"><div class="read" id="readout"></div></div>
   </div>
@@ -111,13 +115,13 @@ var STR={
  it:{sub:"stati di Fock, coerenti · n quanti = n-esima armonica",audio:"◉ Audio",ground:"stato |0⟩",hstate:"stato = Σ cₙ|n⟩",
    lalpha:"α · stato coerente (classicità)",keyhelpL:"tasti",keyhelp:'<b>spazio</b> Audio · <b>r</b> ritmo on/off · <b>0</b> stato |0⟩',
    qexpl:'Uno <b>stato coerente</b> (α grande) è ciò che più assomiglia a un oscillatore <b>classico</b>: il pacchetto oscilla rigido come una massa su una molla. Con <b>pochi quanti</b> emerge la discretizzazione: un singolo autostato di energia è <b>stazionario</b> e quindi <b>muto</b> — impossibile per un oscillatore classico, che con energia si muove sempre.',
-   pcoh:"coerente",hsound:"suono",lwave:"timbro",lcut:"morbidezza · lowpass",lom:"frequenza ω (fondamentale)",lspeed:"velocità",lvol:"volume",lrhyvol:"volume ritmo",back:"← spiegazione del modello",
+   pcoh:"coerente",hsound:"suono",lwave:"timbro",lcut:"morbidezza · lowpass",lom:"frequenza ω (fondamentale)",lspeed:"velocità",lvol:"volume",lrhyvol:"volume ritmo",fire:"🔥 fuoco",lfirevol:"volume fuoco",back:"← spiegazione del modello",
    hint:'▶ premi <b>Audio</b>. Un singolo autostato |n⟩ è <b>muto</b> (stazionario):<br>solo una <b>sovrapposizione</b> di energie diverse batte nel tempo e produce suono.',
    wavelabel:"|ψ(x,t)|²  ·  ⟨x⟩ oscilla a ω",silent:"stato fondamentale: fermo e muto",superp:"sovrapposizione: batte a multipli di ω → armoniche"},
  en:{sub:"Fock & coherent states · n quanta = n-th harmonic",audio:"◉ Audio",ground:"state |0⟩",hstate:"state = Σ cₙ|n⟩",
    lalpha:"α · coherent state (classicality)",keyhelpL:"keys",keyhelp:'<b>space</b> Audio · <b>r</b> rhythm on/off · <b>0</b> state |0⟩',
    qexpl:'A <b>coherent state</b> (large α) is the closest thing to a <b>classical</b> oscillator: the packet swings rigidly like a mass on a spring. With <b>few quanta</b> the discreteness emerges: a single energy eigenstate is <b>stationary</b> and therefore <b>silent</b> — impossible for a classical oscillator, which always moves when it has energy.',
-   pcoh:"coherent",hsound:"sound",lwave:"timbre",lcut:"softness · lowpass",lom:"frequency ω (fundamental)",lspeed:"speed",lvol:"volume",lrhyvol:"rhythm volume",back:"← model explanation",
+   pcoh:"coherent",hsound:"sound",lwave:"timbre",lcut:"softness · lowpass",lom:"frequency ω (fundamental)",lspeed:"speed",lvol:"volume",lrhyvol:"rhythm volume",fire:"🔥 fire",lfirevol:"fire volume",back:"← model explanation",
    hint:'▶ press <b>Audio</b>. A single eigenstate |n⟩ is <b>silent</b> (stationary):<br>only a <b>superposition</b> of different energies beats in time and makes sound.',
    wavelabel:"|ψ(x,t)|²  ·  ⟨x⟩ oscillates at ω",silent:"ground state: still and silent",superp:"superposition: beats at multiples of ω → harmonics"}
 };
@@ -142,6 +146,21 @@ function bongo(f,v){if(!percBus)return;var t=AC.currentTime;var o=AC.createOscil
   var g=AC.createGain();g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.5*v,t+0.005);g.gain.exponentialRampToValueAtTime(0.0006,t+0.18);
   o.connect(g);g.connect(percBus);o.start(t);o.stop(t+0.2);
   var s=AC.createBufferSource();s.buffer=percNoise;var hp=AC.createBiquadFilter();hp.type='highpass';hp.frequency.value=1800;var ng=AC.createGain();ng.gain.setValueAtTime(0.22*v,t);ng.gain.exponentialRampToValueAtTime(0.0006,t+0.03);s.connect(hp);hp.connect(ng);ng.connect(percBus);s.start(t);s.stop(t+0.04);}
+/* ---- fuoco: letto ambientale opzionale (rumore caldo + crepitii), con volume ---- */
+var fireSrc=null,fireGain=null,fireLP=null,fireOn=false,fireVol=0.5;
+function makeFireBuffer(){var sr=AC.sampleRate,n=Math.floor(sr*7),b=AC.createBuffer(1,n,sr),d=b.getChannelData(0);
+  var brown=0,env=0,col=0;
+  for(var i=0;i<n;i++){var w=Math.random()*2-1;brown=(brown+0.02*w)/1.02;var s=brown*3.2;
+    if(env<=0.0003&&Math.random()<0.0012){env=0.4+Math.random()*0.6;col=0.3+Math.random()*0.7;}
+    if(env>0.0003){s+=(Math.random()*2-1)*env*col;env*=0.86+0.08*Math.random();}
+    d[i]=s*0.22;}
+  var xf=Math.min(2000,(n*0.02)|0);for(var k=0;k<xf;k++){var a=k/xf;d[k]=d[k]*a+d[n-xf+k]*(1-a);}
+  return b;}
+function initFire(){if(fireSrc||!AC||!master)return;
+  fireSrc=AC.createBufferSource();fireSrc.buffer=makeFireBuffer();fireSrc.loop=true;
+  fireLP=AC.createBiquadFilter();fireLP.type='lowpass';fireLP.frequency.value=3200;fireLP.Q.value=0.3;
+  fireGain=AC.createGain();fireGain.gain.value=0;
+  fireSrc.connect(fireLP);fireLP.connect(fireGain);fireGain.connect(master);fireSrc.start();}
 function initAudio(){ if(started)return;
   AC=new (window.AudioContext||window.webkitAudioContext)();
   master=AC.createGain();master.gain.value=P.vol;
@@ -154,6 +173,7 @@ function initAudio(){ if(started)return;
     var g=AC.createGain();g.gain.value=0;var pan=AC.createStereoPanner?AC.createStereoPanner():null;
     o.connect(g); if(pan){g.connect(pan);pan.connect(master);} else g.connect(master); o.start();
     harm.push({o:o,g:g,pan:pan,k:k}); }
+  initFire();
   started=true;document.getElementById('hint').style.display='none';document.getElementById('play').classList.remove('on');
   updateAudio();
 }
@@ -244,6 +264,8 @@ $('wave').onchange=function(){P.wave=this.value;for(var i=0;i<harm.length;i++)ha
 $('cut').oninput=function(){P.cut=parseFloat(this.value);$('vcut').textContent=Math.round(P.cut);if(toneLP)toneLP.frequency.setTargetAtTime(P.cut,AC.currentTime,0.03);};
 (function(){var rb=$('rhythmbtn');if(rb){function lab(){rb.textContent=(LANG==='it'?'ritmo: ':'rhythm: ')+(percOn?'on':'off');}
   rb.onclick=function(){percOn=!percOn;rb.classList.toggle('on',percOn);lab();};window.__rhyLab=lab;lab();}
+$('firebtn').onclick=function(){if(!started)initAudio();if(!fireSrc)initFire();fireOn=!fireOn;this.classList.toggle('on',fireOn);if(fireGain&&AC)fireGain.gain.setTargetAtTime(fireOn?fireVol:0,AC.currentTime,fireOn?0.35:0.6);};
+$('firevol').oninput=function(){fireVol=parseFloat(this.value);$('vfirevol').textContent=fireVol.toFixed(2);if(fireOn&&fireGain&&AC)fireGain.gain.setTargetAtTime(fireVol,AC.currentTime,0.05);};
   var rv=$('rhyvol');if(rv)rv.oninput=function(){percVol=parseFloat(rv.value);$('vrhyvol').textContent=percVol.toFixed(2);if(percBus&&AC)percBus.gain.setTargetAtTime(percVol,AC.currentTime,0.03);};})();
 /* ---- REC AUDIO (m4a / AAC, fallback webm-opus) ---- */
 (function(){var b=$('recaudiobtn');if(!b)return;var rec=null,chunks=[],dest=null,DEF='● REC audio · m4a';

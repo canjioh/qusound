@@ -34,6 +34,7 @@
   #autopluck.on{color:var(--psi);border-color:var(--psi)}
   #recaudiobtn.on{color:var(--x);border-color:var(--x)}
   #rhythmbtn.on{color:var(--z);border-color:var(--z)}
+  #firebtn.on{color:var(--amber);border-color:var(--amber)}
   .kh{position:relative;display:inline-block;margin:0 0 11px;color:var(--dim);font-size:11px;cursor:help;border:1px solid var(--bd2);border-radius:999px;padding:2px 10px}
   .kh .khtip{position:absolute;top:23px;left:0;width:240px;display:none;background:#0f0f18;border:1px solid var(--bd2);border-radius:6px;padding:9px 11px;color:var(--dim);font-size:11px;line-height:1.7;z-index:10;box-shadow:0 8px 24px rgba(0,0,0,.55);text-align:left}
   .kh:hover .khtip{display:block} .kh .khtip b{color:var(--psi)}
@@ -85,6 +86,9 @@
       <button id="rhythmbtn" style="width:100%;margin-top:8px">ritmo: off</button>
       <label data-t="lrhyvol">volume ritmo <span class="val" id="vrhyvol">0.80</span></label>
       <input type="range" id="rhyvol" min="0" max="1.5" step="0.01" value="0.8">
+      <button id="firebtn" data-t="fire" style="width:100%;margin-top:8px">🔥 fuoco</button>
+      <label data-t="lfirevol">volume fuoco <span class="val" id="vfirevol">0.50</span></label>
+      <input type="range" id="firevol" min="0" max="1" step="0.01" value="0.5">
     </div>
     <div class="card"><div class="read" id="readout"></div></div>
   </div>
@@ -104,12 +108,12 @@ var STR={
    lN:"numero di siti N",lstiff:"rigidità (ω₀)",lpos:"sito pizzicato",ldecay:"durata (ring)",hsound:"suono",lvol:"volume",
    back:"← spiegazione del modello",
    hint:'▶ premi <b>Audio</b>, poi <b>pizzica</b>: l\'eccitazione si scompone nei modi normali (fononi) e si propaga lungo la catena.',
-   disp:"dispersione ω(k) — le altezze del timbro",chain:"catena",lrate:"ritmo",apOn:"pizzico auto: on",apOff:"pizzico auto: off",timbnote:"timbro = spettro dei modi",lrhyvol:"volume ritmo",keyhelpL:"tasti",keyhelp:'<b>spazio</b> pizzica · <b>a</b> pizzico auto · <b>r</b> ritmo on/off'},
+   disp:"dispersione ω(k) — le altezze del timbro",chain:"catena",lrate:"ritmo",apOn:"pizzico auto: on",apOff:"pizzico auto: off",timbnote:"timbro = spettro dei modi",lrhyvol:"volume ritmo",fire:"🔥 fuoco",lfirevol:"volume fuoco",keyhelpL:"tasti",keyhelp:'<b>spazio</b> pizzica · <b>a</b> pizzico auto · <b>r</b> ritmo on/off'},
  en:{sub:"chain of coupled oscillators · normal modes",audio:"◉ Audio",pluck:"pluck",hchain:"chain",
    lN:"number of sites N",lstiff:"stiffness (ω₀)",lpos:"plucked site",ldecay:"ring time",hsound:"sound",lvol:"volume",
    back:"← model explanation",
    hint:'▶ press <b>Audio</b>, then <b>pluck</b>: the excitation splits into the normal modes (phonons) and travels along the chain.',
-   disp:"dispersion ω(k) — the pitches of the timbre",chain:"chain",lrate:"rhythm",apOn:"auto pluck: on",apOff:"auto pluck: off",timbnote:"timbre = mode spectrum",lrhyvol:"rhythm volume",keyhelpL:"keys",keyhelp:'<b>space</b> pluck · <b>a</b> auto pluck · <b>r</b> rhythm on/off'}
+   disp:"dispersion ω(k) — the pitches of the timbre",chain:"chain",lrate:"rhythm",apOn:"auto pluck: on",apOff:"auto pluck: off",timbnote:"timbre = mode spectrum",lrhyvol:"rhythm volume",fire:"🔥 fire",lfirevol:"fire volume",keyhelpL:"keys",keyhelp:'<b>space</b> pluck · <b>a</b> auto pluck · <b>r</b> rhythm on/off'}
 };
 function T(k){return (STR[LANG]&&STR[LANG][k]!=null)?STR[LANG][k]:STR.it[k];}
 function applyLang(){document.querySelectorAll('[data-t]').forEach(function(n){var k=n.getAttribute('data-t');if(STR[LANG][k]==null)return;
@@ -138,6 +142,21 @@ function bongo(f,v){if(!percBus)return;var t=AC.currentTime;var o=AC.createOscil
   o.connect(g);g.connect(percBus);o.start(t);o.stop(t+0.2);
   var s=AC.createBufferSource();s.buffer=percNoise;var hp=AC.createBiquadFilter();hp.type='highpass';hp.frequency.value=1800;var ng=AC.createGain();ng.gain.setValueAtTime(0.22*(v||1),t);ng.gain.exponentialRampToValueAtTime(0.0006,t+0.03);s.connect(hp);hp.connect(ng);ng.connect(percBus);s.start(t);s.stop(t+0.04);}
 function fk(k){return 90+360*(omega[k]/(2*P.stiff));}   // map the dispersion band to 90..450 Hz
+/* ---- fuoco: letto ambientale opzionale (rumore caldo + crepitii), con volume ---- */
+var fireSrc=null,fireGain=null,fireLP=null,fireOn=false,fireVol=0.5;
+function makeFireBuffer(){var sr=AC.sampleRate,n=Math.floor(sr*7),b=AC.createBuffer(1,n,sr),d=b.getChannelData(0);
+  var brown=0,env=0,col=0;
+  for(var i=0;i<n;i++){var w=Math.random()*2-1;brown=(brown+0.02*w)/1.02;var s=brown*3.2;
+    if(env<=0.0003&&Math.random()<0.0012){env=0.4+Math.random()*0.6;col=0.3+Math.random()*0.7;}
+    if(env>0.0003){s+=(Math.random()*2-1)*env*col;env*=0.86+0.08*Math.random();}
+    d[i]=s*0.22;}
+  var xf=Math.min(2000,(n*0.02)|0);for(var k=0;k<xf;k++){var a=k/xf;d[k]=d[k]*a+d[n-xf+k]*(1-a);}
+  return b;}
+function initFire(){if(fireSrc||!AC||!master)return;
+  fireSrc=AC.createBufferSource();fireSrc.buffer=makeFireBuffer();fireSrc.loop=true;
+  fireLP=AC.createBiquadFilter();fireLP.type='lowpass';fireLP.frequency.value=3200;fireLP.Q.value=0.3;
+  fireGain=AC.createGain();fireGain.gain.value=0;
+  fireSrc.connect(fireLP);fireLP.connect(fireGain);fireGain.connect(master);fireSrc.start();}
 function initAudio(){ if(started)return;
   AC=new (window.AudioContext||window.webkitAudioContext)();
   master=AC.createGain();master.gain.value=P.vol;
@@ -146,6 +165,7 @@ function initAudio(){ if(started)return;
   percBus=AC.createGain();percBus.gain.value=percVol;percBus.connect(lim);
   percNoise=AC.createBuffer(1,Math.floor(AC.sampleRate*0.2),AC.sampleRate);var _pd=percNoise.getChannelData(0);for(var _pi=0;_pi<_pd.length;_pi++)_pd[_pi]=Math.random()*2-1;
   buildModes();
+  initFire();
   started=true;document.getElementById('hint').style.display='none';document.getElementById('play').classList.remove('on');
 }
 function buildModes(){ if(!AC)return; for(var i=0;i<modes.length;i++){try{modes[i].o.stop();}catch(e){}}
@@ -211,6 +231,8 @@ function rng(id,vid,key,dec){var s=$(id);s.oninput=function(){var v=parseFloat(s
 rng('N','vN','N',null);rng('stiff','vstiff','stiff',2);rng('pos','vpos','pos',null);rng('decay','vdecay','decay',2);rng('rate','vrate','rate',2);rng('vol','vvol','vol',1);
 (function(){var rb=$('rhythmbtn');if(rb){function lab(){rb.textContent=(LANG==='it'?'ritmo: ':'rhythm: ')+(percOn?'on':'off');}
   rb.onclick=function(){percOn=!percOn;rb.classList.toggle('on',percOn);lab();};window.__rhyLab=lab;lab();}
+$('firebtn').onclick=function(){if(!started)initAudio();if(!fireSrc)initFire();fireOn=!fireOn;this.classList.toggle('on',fireOn);if(fireGain&&AC)fireGain.gain.setTargetAtTime(fireOn?fireVol:0,AC.currentTime,fireOn?0.35:0.6);};
+$('firevol').oninput=function(){fireVol=parseFloat(this.value);$('vfirevol').textContent=fireVol.toFixed(2);if(fireOn&&fireGain&&AC)fireGain.gain.setTargetAtTime(fireVol,AC.currentTime,0.05);};
   var rv=$('rhyvol');if(rv)rv.oninput=function(){percVol=parseFloat(rv.value);$('vrhyvol').textContent=percVol.toFixed(2);if(percBus&&AC)percBus.gain.setTargetAtTime(percVol,AC.currentTime,0.03);};})();
 /* ---- REC AUDIO (m4a / AAC, fallback webm-opus) ---- */
 (function(){var b=$('recaudiobtn');if(!b)return;var rec=null,chunks=[],dest=null,DEF='● REC audio · m4a';

@@ -35,6 +35,7 @@
   #flips{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px}
   #flips button{color:var(--x);border-color:rgba(255,90,79,.4);padding:7px 2px}
   #recaudiobtn.on{color:var(--x);border-color:var(--x)}
+  #firebtn.on{color:var(--amber);border-color:var(--amber)}
   .read{font:12px/1.7 var(--mono);color:var(--faint)} .read b{color:var(--psi)}
   a.back{position:absolute;top:12px;left:12px;padding:7px 13px;background:rgba(20,20,40,.6);color:var(--dim);border:1px solid var(--bd);border-radius:999px;text-decoration:none;font-size:13px;z-index:4}
   a.back:hover{color:var(--ink)}
@@ -87,6 +88,9 @@
       <input type="range" id="tfield" min="0" max="1" step="0.01" value="0.25">
       <label data-t="lvol">volume <span class="val" id="vvol">0.7</span></label>
       <input type="range" id="vol" min="0" max="1" step="0.01" value="0.7">
+      <button id="firebtn" data-t="fire" style="width:100%;margin-top:8px">🔥 fuoco</button>
+      <label data-t="lfirevol">volume fuoco <span class="val" id="vfirevol">0.50</span></label>
+      <input type="range" id="firevol" min="0" max="1" step="0.01" value="0.5">
     </div>
     <div class="kh">? <span data-t="keyhelpL">tasti</span><div class="khtip" data-t="keyhelp"></div></div>
     <button id="recaudiobtn" style="width:100%;margin-bottom:11px">● REC audio · m4a</button>
@@ -105,13 +109,13 @@
 var LANG=(function(){try{return localStorage.getItem('qlang')||'en';}catch(e){return 'en';}})();
 var STR={
  it:{sub:"codice a N qubit · sindrome · correzione",audio:"◉ Audio",hcode:"codice",ltype:"tipo di codice",lN:"numero di qubit N",
-   herr:"errori",lnoise:"rumore (errori casuali)",lflip:"flip manuale (inietta un errore)",hcyc:"ciclo & suono",lcyc:"ciclo di misura",lspeed:"velocità (qubit logico)",ltfield:"campo trasverso (armonia)",lvol:"volume",
+   herr:"errori",lnoise:"rumore (errori casuali)",lflip:"flip manuale (inietta un errore)",hcyc:"ciclo & suono",lcyc:"ciclo di misura",lspeed:"velocità (qubit logico)",ltfield:"campo trasverso (armonia)",lvol:"volume",fire:"🔥 fuoco",lfirevol:"volume fuoco",
    back:"← spiegazione del modello",keyhelpL:"tasti",keyhelp:'<b>spazio</b> Audio · <b>c</b> correzione · <b>t</b> bit/phase · <b>1…'+'6</b> misura uno stabilizzatore (flip errore: coi pulsanti)',measd:"misurato",
    hint:'▶ premi <b>Audio</b>. N qubit codificano UN qubit logico entangled; misuro di continuo gli stabilizzatori (parità di coppie, non i singoli qubit) e correggo. La melodia logica sopravvive.',
    logico:"qubit logico",fed:"fedeltà",sind:"sindrome",corr:"correzione",on:"on",off:"off",noerr:"nessun errore",
    detq:"errore rilevato",lerr:"ERRORE LOGICO",cyc:"cicli",corrN:"corretti",protetto:"gli stabilizzatori leggono solo la PARITÀ → l'informazione logica resta protetta"},
  en:{sub:"N-qubit code · syndrome · correction",audio:"◉ Audio",hcode:"code",ltype:"code type",lN:"number of qubits N",
-   herr:"errors",lnoise:"noise (random errors)",lflip:"manual flip (inject an error)",hcyc:"cycle & sound",lcyc:"measurement cycle",lspeed:"speed (logical qubit)",ltfield:"transverse field (harmony)",lvol:"volume",
+   herr:"errors",lnoise:"noise (random errors)",lflip:"manual flip (inject an error)",hcyc:"cycle & sound",lcyc:"measurement cycle",lspeed:"speed (logical qubit)",ltfield:"transverse field (harmony)",lvol:"volume",fire:"🔥 fire",lfirevol:"fire volume",
    back:"← model explanation",keyhelpL:"keys",keyhelp:'<b>space</b> Audio · <b>c</b> correction · <b>t</b> bit/phase · <b>1…'+'6</b> measure a stabilizer (error flip: use the buttons)',measd:"measured",
    hint:'▶ press <b>Audio</b>. N qubits encode ONE entangled logical qubit; I keep measuring the stabilizers (pair parities, not the single qubits) and correct. The logical melody survives.',
    logico:"logical qubit",fed:"fidelity",sind:"syndrome",corr:"correction",on:"on",off:"off",noerr:"no error",
@@ -175,6 +179,21 @@ function reconfig(){DIM=1<<N;syn=[];for(var i=0;i<N-1;i++)syn.push(1);flash=[];q
 var AC=null,master,lead,leadG,pad=[],padG,started=false;
 var SCALE=[0,2,4,7,9], ROOT=196;
 function sfreq(d){var o=Math.floor(d/5),i=((d%5)+5)%5;return ROOT*Math.pow(2,o)*Math.pow(2,SCALE[i]/12);}
+/* ---- fuoco: letto ambientale opzionale (rumore caldo + crepitii), con volume ---- */
+var fireSrc=null,fireGain=null,fireLP=null,fireOn=false,fireVol=0.5;
+function makeFireBuffer(){var sr=AC.sampleRate,n=Math.floor(sr*7),b=AC.createBuffer(1,n,sr),d=b.getChannelData(0);
+  var brown=0,env=0,col=0;
+  for(var i=0;i<n;i++){var w=Math.random()*2-1;brown=(brown+0.02*w)/1.02;var s=brown*3.2;
+    if(env<=0.0003&&Math.random()<0.0012){env=0.4+Math.random()*0.6;col=0.3+Math.random()*0.7;}
+    if(env>0.0003){s+=(Math.random()*2-1)*env*col;env*=0.86+0.08*Math.random();}
+    d[i]=s*0.22;}
+  var xf=Math.min(2000,(n*0.02)|0);for(var k=0;k<xf;k++){var a=k/xf;d[k]=d[k]*a+d[n-xf+k]*(1-a);}
+  return b;}
+function initFire(){if(fireSrc||!AC||!master)return;
+  fireSrc=AC.createBufferSource();fireSrc.buffer=makeFireBuffer();fireSrc.loop=true;
+  fireLP=AC.createBiquadFilter();fireLP.type='lowpass';fireLP.frequency.value=3200;fireLP.Q.value=0.3;
+  fireGain=AC.createGain();fireGain.gain.value=0;
+  fireSrc.connect(fireLP);fireLP.connect(fireGain);fireGain.connect(master);fireSrc.start();}
 function initAudio(){ if(started)return;
   AC=new (window.AudioContext||window.webkitAudioContext)();
   master=AC.createGain();master.gain.value=P.vol;
@@ -185,6 +204,7 @@ function initAudio(){ if(started)return;
   padG=AC.createGain();padG.gain.value=0;padG.connect(master);
   for(var j=0;j<2;j++){var o=AC.createOscillator();o.type='sine';o.frequency.value=ROOT*(j?1.5:0.5);o.connect(padG);o.start();pad.push(o);}
   try{if(AC.state==='suspended')AC.resume();}catch(e){}   // some browsers create the context suspended -> force it to run
+  initFire();
   started=true;document.getElementById('hint').style.display='none';document.getElementById('play').classList.remove('on');
 }
 function nbuf(){var b=AC.createBuffer(1,Math.floor(AC.sampleRate*0.2),AC.sampleRate),d=b.getChannelData(0);for(var i=0;i<d.length;i++)d[i]=Math.random()*2-1;return b;}
@@ -275,6 +295,8 @@ $('ctype').onchange=function(){codeType=this.value;reconfig();};
 $('N').oninput=function(){N=parseInt(this.value,10);$('vN').textContent=N;reconfig();};
 function rng(id,vid,key,dec){var s=$(id);s.oninput=function(){var v=parseFloat(s.value);P[key]=v;$(vid).textContent=dec!=null?v.toFixed(dec):Math.round(v);if(key==='vol'&&master)master.gain.setTargetAtTime(v,AC.currentTime,0.03);};}
 rng('noise','vnoise','noise',2);rng('cyc','vcyc','cyc',2);rng('speed','vspeed','speed',2);rng('tfield','vtfield','tfield',2);rng('vol','vvol','vol',1);
+$('firebtn').onclick=function(){if(!started)initAudio();if(!fireSrc)initFire();fireOn=!fireOn;this.classList.toggle('on',fireOn);if(fireGain&&AC)fireGain.gain.setTargetAtTime(fireOn?fireVol:0,AC.currentTime,fireOn?0.35:0.6);};
+$('firevol').oninput=function(){fireVol=parseFloat(this.value);$('vfirevol').textContent=fireVol.toFixed(2);if(fireOn&&fireGain&&AC)fireGain.gain.setTargetAtTime(fireVol,AC.currentTime,0.05);};
 /* ---- REC AUDIO (m4a / AAC, fallback webm-opus) ---- */
 (function(){var b=$('recaudiobtn');if(!b)return;var rec=null,chunks=[],dest=null,DEF='● REC audio · m4a';
   function rmime(){var L=['audio/mp4;codecs=mp4a.40.2','audio/mp4','audio/webm;codecs=opus','audio/webm'];for(var i=0;i<L.length;i++){try{if(window.MediaRecorder&&MediaRecorder.isTypeSupported(L[i]))return L[i];}catch(e){}}return '';}

@@ -28,6 +28,7 @@
   button:hover{background:#1d1d40}
   #recaudiobtn.on{color:var(--x);border-color:var(--x)}
   #rhythmbtn.on{color:var(--z);border-color:var(--z)}
+  #firebtn.on{color:var(--amber);border-color:var(--amber)}
   .transport{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:11px}
   #play{background:linear-gradient(180deg,#3a3f47,#20242a);color:var(--amber);font-weight:700}
   #play.on{background:#16181c;color:var(--ink);border:1px solid var(--bd2)}   /* grigio = fermo; arancione = attivo */
@@ -89,6 +90,9 @@
       <button id="rhythmbtn" style="width:100%;margin-top:8px">ritmo: off</button>
       <label data-t="lrhyvol">volume ritmo <span class="val" id="vrhyvol">0.80</span></label>
       <input type="range" id="rhyvol" min="0" max="1.5" step="0.01" value="0.8">
+      <button id="firebtn" data-t="fire" style="width:100%;margin-top:8px">🔥 fuoco</button>
+      <label data-t="lfirevol">volume fuoco <span class="val" id="vfirevol">0.50</span></label>
+      <input type="range" id="firevol" min="0" max="1" step="0.01" value="0.5">
     </div>
     <div class="card"><div class="read" id="readout"></div></div>
   </div>
@@ -105,7 +109,7 @@
 var LANG=(function(){try{return localStorage.getItem('qlang')||'en';}catch(e){return 'en';}})();
 var STR={
  it:{sub:"atomo + cavità · collasso e rinascita",audio:"◉ Audio",reset:"reset t=0",hfield:"campo & accoppiamento",
-   lnbar:"fotoni medi n̄",lg:"accoppiamento g",ldet:"detuning Δ",hsound:"suono",lwave:"timbro",lcut:"morbidezza · lowpass",lspeed:"velocità",lvol:"volume",lrhyvol:"volume ritmo",
+   lnbar:"fotoni medi n̄",lg:"accoppiamento g",ldet:"detuning Δ",hsound:"suono",lwave:"timbro",lcut:"morbidezza · lowpass",lspeed:"velocità",lvol:"volume",lrhyvol:"volume ritmo",fire:"🔥 fuoco",lfirevol:"volume fuoco",
    back:"← spiegazione del modello",
    hint:'▶ premi <b>Audio</b>: l\'atomo eccitato scambia un fotone con la cavità.<br>Le oscillazioni di Rabi collassano e poi <b>rinascono</b>.',
    atom:"atomo",cav:"cavità",inv:"inversione atomica W(t) = ⟨σ_z⟩ · collasso → rinascita",
@@ -113,7 +117,7 @@ var STR={
    lspread:"granularità quantistica",keyhelpL:"tasti",keyhelp:'<b>spazio</b> Audio · <b>r</b> ritmo on/off',
    qexpl:'A <b>granularità 0</b> il campo ha un numero di fotoni definito: le oscillazioni di Rabi non collassano mai (limite quasi-classico). Alzandola, i diversi Ω<sub>n</sub> = 2g√(n+1) si sfasano → <b>collasso e rinascita</b>, effetto puramente quantistico.'},
  en:{sub:"atom + cavity · collapse and revival",audio:"◉ Audio",reset:"reset t=0",hfield:"field & coupling",
-   lnbar:"mean photons n̄",lg:"coupling g",ldet:"detuning Δ",hsound:"sound",lwave:"timbre",lcut:"softness · lowpass",lspeed:"speed",lvol:"volume",lrhyvol:"rhythm volume",
+   lnbar:"mean photons n̄",lg:"coupling g",ldet:"detuning Δ",hsound:"sound",lwave:"timbre",lcut:"softness · lowpass",lspeed:"speed",lvol:"volume",lrhyvol:"rhythm volume",fire:"🔥 fire",lfirevol:"fire volume",
    back:"← model explanation",
    hint:'▶ press <b>Audio</b>: the excited atom trades a photon with the cavity.<br>The Rabi oscillations collapse and then <b>revive</b>.',
    atom:"atom",cav:"cavity",inv:"atomic inversion W(t) = ⟨σ_z⟩ · collapse → revival",
@@ -151,6 +155,21 @@ function tom(f,v){if(!percBus)return;var t=AC.currentTime;var o=AC.createOscilla
   var s=AC.createBufferSource();s.buffer=percNoise;var hp=AC.createBiquadFilter();hp.type='highpass';hp.frequency.value=1600;var ng=AC.createGain();ng.gain.setValueAtTime(0.2*v,t);ng.gain.exponentialRampToValueAtTime(0.0006,t+0.03);s.connect(hp);hp.connect(ng);ng.connect(percBus);s.start(t);s.stop(t+0.04);}
 var SCALE=[0,2,4,7,9], ROOT=130.81;                        // C3 major pentatonic
 function scaleFreq(deg){var o=Math.floor(deg/5),i=((deg%5)+5)%5;return ROOT*Math.pow(2,o)*Math.pow(2,SCALE[i]/12);}
+/* ---- fuoco: letto ambientale opzionale (rumore caldo + crepitii), con volume ---- */
+var fireSrc=null,fireGain=null,fireLP=null,fireOn=false,fireVol=0.5;
+function makeFireBuffer(){var sr=AC.sampleRate,n=Math.floor(sr*7),b=AC.createBuffer(1,n,sr),d=b.getChannelData(0);
+  var brown=0,env=0,col=0;
+  for(var i=0;i<n;i++){var w=Math.random()*2-1;brown=(brown+0.02*w)/1.02;var s=brown*3.2;
+    if(env<=0.0003&&Math.random()<0.0012){env=0.4+Math.random()*0.6;col=0.3+Math.random()*0.7;}
+    if(env>0.0003){s+=(Math.random()*2-1)*env*col;env*=0.86+0.08*Math.random();}
+    d[i]=s*0.22;}
+  var xf=Math.min(2000,(n*0.02)|0);for(var k=0;k<xf;k++){var a=k/xf;d[k]=d[k]*a+d[n-xf+k]*(1-a);}
+  return b;}
+function initFire(){if(fireSrc||!AC||!master)return;
+  fireSrc=AC.createBufferSource();fireSrc.buffer=makeFireBuffer();fireSrc.loop=true;
+  fireLP=AC.createBiquadFilter();fireLP.type='lowpass';fireLP.frequency.value=3200;fireLP.Q.value=0.3;
+  fireGain=AC.createGain();fireGain.gain.value=0;
+  fireSrc.connect(fireLP);fireLP.connect(fireGain);fireGain.connect(master);fireSrc.start();}
 function initAudio(){ if(started)return;
   AC=new (window.AudioContext||window.webkitAudioContext)();
   master=AC.createGain();master.gain.value=P.vol;
@@ -164,6 +183,7 @@ function initAudio(){ if(started)return;
     var g=AC.createGain();g.gain.value=0;o.connect(g);g.connect(master);o.start();chord.push({o:o,g:g,deg:j});}
   atomLead=AC.createOscillator();atomLead.type='triangle';atomLead.frequency.value=scaleFreq(NV+3);
   atomG=AC.createGain();atomG.gain.value=0;atomLead.connect(atomG);atomG.connect(master);atomLead.start();
+  initFire();
   started=true;document.getElementById('hint').style.display='none';document.getElementById('play').classList.remove('on');
 }
 // a bright ping on each Rabi peak -> you HEAR the oscillations collapse (pings thin out) and revive (pings return)
@@ -246,6 +266,8 @@ $('wave').onchange=function(){P.wave=this.value;for(var i=0;i<chord.length;i++)c
 $('cut').oninput=function(){P.cut=parseFloat(this.value);$('vcut').textContent=Math.round(P.cut);if(toneLP)toneLP.frequency.setTargetAtTime(P.cut,AC.currentTime,0.03);};
 (function(){var rb=$('rhythmbtn');if(rb){function lab(){rb.textContent=(LANG==='it'?'ritmo: ':'rhythm: ')+(percOn?'on':'off');}
   rb.onclick=function(){percOn=!percOn;rb.classList.toggle('on',percOn);lab();};window.__rhyLab=lab;lab();}
+$('firebtn').onclick=function(){if(!started)initAudio();if(!fireSrc)initFire();fireOn=!fireOn;this.classList.toggle('on',fireOn);if(fireGain&&AC)fireGain.gain.setTargetAtTime(fireOn?fireVol:0,AC.currentTime,fireOn?0.35:0.6);};
+$('firevol').oninput=function(){fireVol=parseFloat(this.value);$('vfirevol').textContent=fireVol.toFixed(2);if(fireOn&&fireGain&&AC)fireGain.gain.setTargetAtTime(fireVol,AC.currentTime,0.05);};
   var rv=$('rhyvol');if(rv)rv.oninput=function(){percVol=parseFloat(rv.value);$('vrhyvol').textContent=percVol.toFixed(2);if(percBus&&AC)percBus.gain.setTargetAtTime(percVol,AC.currentTime,0.03);};})();
 /* ---- REC AUDIO (m4a / AAC, fallback webm-opus) ---- */
 (function(){var b=$('recaudiobtn');if(!b)return;var rec=null,chunks=[],dest=null,DEF='● REC audio · m4a';

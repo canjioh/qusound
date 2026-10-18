@@ -40,6 +40,7 @@
   select{width:100%;padding:6px;background:#121226;color:var(--ink);border:1px solid var(--bd2);border-radius:8px;font:inherit;font-size:13px}
   button{padding:8px 4px;background:#151530;color:var(--ink);border:1px solid var(--bd2);border-radius:9px;cursor:pointer;font:inherit;font-size:12px;transition:.12s}
   #recaudiobtn.on{color:var(--x);border-color:var(--x)}
+  #firebtn.on{color:var(--amber);border-color:var(--amber)}
   button:hover{background:#1d1d40;border-color:#3a3a66}
   .gates{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
   .gates button{font-weight:700}
@@ -123,6 +124,9 @@
       <input type="range" id="bed" min="0" max="1" step="0.01" value="0.4">
       <label data-t="lvol">volume <span class="val" id="vvol">0.75</span></label>
       <input type="range" id="vol" min="0" max="1" step="0.01" value="0.75">
+      <button id="firebtn" data-t="fire" style="width:100%;margin-top:8px">🔥 fuoco</button>
+      <label data-t="lfirevol">volume fuoco <span class="val" id="vfirevol">0.50</span></label>
+      <input type="range" id="firevol" min="0" max="1" step="0.01" value="0.5">
     </div>
 
     <div class="card">
@@ -237,7 +241,7 @@ var LANG=(function(){try{return localStorage.getItem('qlang')||'en';}catch(e){re
 var STR={
  it:{sub:"precessione continua · misura",audio:"◉ Audio",hfield:"campo / evoluzione",lspeed:"velocità",
    hsound:"suono",lroot:"root Hz",lrange:"estensione (semitoni)",lquant:"quantizza su scala",llead:"voce lead",
-   lbed:"bed (sovrapposizione)",lvol:"volume",hgates:"porte (colpi)",hmeas:"misura · collasso (Born)",
+   lbed:"bed (sovrapposizione)",lvol:"volume",fire:"🔥 fuoco",lfirevol:"volume fuoco",hgates:"porte (colpi)",hmeas:"misura · collasso (Born)",
    lmusical:"collasso armonico",lauto:"auto-misura a tempo",lbpm:"bpm",lsub:"ritmo · passi per battito",lswing:"swing",
    hrec:"registrazione",keysnote:"tasti: [1] misura Z · [2] misura X · [3] misura Y · [spazio] base corrente",
    lview:"vista (per registrazione / live)",vwfull:"piena (con scritte)",vwsph:"solo sfera",vwmin:"essenziale (profili)",back:"← spiegazione del modello",
@@ -247,7 +251,7 @@ var STR={
    rState:"stato",rSup:"sovrapposizione",rColl:"collassato",rLast:"ultimo esito",rNone:"—",rField:"campo"},
  en:{sub:"continuous precession · measurement",audio:"◉ Audio",hfield:"field / evolution",lspeed:"speed",
    hsound:"sound",lroot:"root Hz",lrange:"range (semitones)",lquant:"quantize to scale",llead:"lead voice",
-   lbed:"bed (superposition)",lvol:"volume",hgates:"gates (kicks)",hmeas:"measure · collapse (Born)",
+   lbed:"bed (superposition)",lvol:"volume",fire:"🔥 fire",lfirevol:"fire volume",hgates:"gates (kicks)",hmeas:"measure · collapse (Born)",
    lmusical:"harmonic collapse",lauto:"auto-measure on beat",lbpm:"bpm",lsub:"rhythm · steps per beat",lswing:"swing",
    hrec:"recording",keysnote:"keys: [1] measure Z · [2] measure X · [3] measure Y · [space] current basis",
    lview:"view (for recording / live)",vwfull:"full (with labels)",vwsph:"sphere only",vwmin:"minimal (profiles)",back:"← model explanation",
@@ -310,6 +314,21 @@ function collapseFreq(b,bit,fRef){
 /* ---- audio ---- */
 var AC=null,master,leadOsc,leadOsc2,leadGain,leadFilter,tremGain,lfoDepth,panner,o0,o1,g0,g1,bedGain,started=false;
 var MOBILE=(window.matchMedia&&window.matchMedia('(max-width:760px)').matches)||/Mobi|Android|iPhone|iPod/i.test(navigator.userAgent||'');
+/* ---- fuoco: letto ambientale opzionale (rumore caldo + crepitii), con volume ---- */
+var fireSrc=null,fireGain=null,fireLP=null,fireOn=false,fireVol=0.5;
+function makeFireBuffer(){var sr=AC.sampleRate,n=Math.floor(sr*7),b=AC.createBuffer(1,n,sr),d=b.getChannelData(0);
+  var brown=0,env=0,col=0;
+  for(var i=0;i<n;i++){var w=Math.random()*2-1;brown=(brown+0.02*w)/1.02;var s=brown*3.2;
+    if(env<=0.0003&&Math.random()<0.0012){env=0.4+Math.random()*0.6;col=0.3+Math.random()*0.7;}
+    if(env>0.0003){s+=(Math.random()*2-1)*env*col;env*=0.86+0.08*Math.random();}
+    d[i]=s*0.22;}
+  var xf=Math.min(2000,(n*0.02)|0);for(var k=0;k<xf;k++){var a=k/xf;d[k]=d[k]*a+d[n-xf+k]*(1-a);}
+  return b;}
+function initFire(){if(fireSrc||!AC||!master)return;
+  fireSrc=AC.createBufferSource();fireSrc.buffer=makeFireBuffer();fireSrc.loop=true;
+  fireLP=AC.createBiquadFilter();fireLP.type='lowpass';fireLP.frequency.value=3200;fireLP.Q.value=0.3;
+  fireGain=AC.createGain();fireGain.gain.value=0;
+  fireSrc.connect(fireLP);fireLP.connect(fireGain);fireGain.connect(master);fireSrc.start();}
 function initAudio(){
   if(started)return;
   AC=new (window.AudioContext||window.webkitAudioContext)();
@@ -346,6 +365,7 @@ function initAudio(){
   o1=AC.createOscillator();o1.type='sine';g1=AC.createGain();g1.gain.value=0.0;
   o0.connect(g0);g0.connect(bedGain);o1.connect(g1);g1.connect(bedGain);bedGain.connect(master);
   o0.start();o1.start();
+  initFire();
   started=true;document.getElementById('hint').style.display='none';document.getElementById('play').classList.remove('on');
 }
 function buildTable(){var t=[];for(var oct=0;oct<3;oct++)for(var i=0;i<SCALE.length;i++){var v=oct*12+SCALE[i];if(v<=P.range)t.push(v);}if(!t.length)t.push(0);return t;}
@@ -394,6 +414,8 @@ function setBasis(b){basis=b;document.getElementById('mz').classList.toggle('on'
 
 /* ---- UI ---- */
 document.getElementById('play').addEventListener('click',function(){if(!started)initAudio();else if(AC.state==='suspended'&&!paused)AC.resume();});
+document.getElementById('firebtn').onclick=function(){if(!started)initAudio();if(!fireSrc)initFire();fireOn=!fireOn;this.classList.toggle('on',fireOn);if(fireGain&&AC)fireGain.gain.setTargetAtTime(fireOn?fireVol:0,AC.currentTime,fireOn?0.35:0.6);};
+document.getElementById('firevol').oninput=function(){fireVol=parseFloat(this.value);document.getElementById('vfirevol').textContent=fireVol.toFixed(2);if(fireOn&&fireGain&&AC)fireGain.gain.setTargetAtTime(fireVol,AC.currentTime,0.05);};
 // ---- general pause: freezes the precession + trail AND the audio; resumes cleanly ----
 var paused=false;
 (function(){var pb=document.getElementById('pause');
