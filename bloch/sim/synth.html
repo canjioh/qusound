@@ -124,9 +124,15 @@
       <input type="range" id="bed" min="0" max="1" step="0.01" value="0.4">
       <label data-t="lvol">volume <span class="val" id="vvol">0.75</span></label>
       <input type="range" id="vol" min="0" max="1" step="0.01" value="0.75">
-      <button id="firebtn" data-t="fire" style="width:100%;margin-top:8px">🔥 fuoco</button>
-      <label data-t="lfirevol">volume fuoco <span class="val" id="vfirevol">0.50</span></label>
+      <button id="firebtn" data-t="ambient" style="width:100%;margin-top:8px">ambiente</button>
+      <label data-t="lfirevol">livello <span class="val" id="vfirevol">0.50</span></label>
       <input type="range" id="firevol" min="0" max="1" step="0.01" value="0.5">
+      <label data-t="lfirecr">crepitio <span class="val" id="vfirecr">0.60</span></label>
+      <input type="range" id="firecr" min="0" max="1" step="0.01" value="0.6">
+      <label data-t="lfiretone">colore <span class="val" id="vfiretone">0.55</span></label>
+      <input type="range" id="firetone" min="0" max="1" step="0.01" value="0.55">
+      <label data-t="lfiregrit">disturbo <span class="val" id="vfiregrit">0.35</span></label>
+      <input type="range" id="firegrit" min="0" max="1" step="0.01" value="0.35">
     </div>
 
     <div class="card">
@@ -241,7 +247,7 @@ var LANG=(function(){try{return localStorage.getItem('qlang')||'en';}catch(e){re
 var STR={
  it:{sub:"precessione continua · misura",audio:"◉ Audio",hfield:"campo / evoluzione",lspeed:"velocità",
    hsound:"suono",lroot:"root Hz",lrange:"estensione (semitoni)",lquant:"quantizza su scala",llead:"voce lead",
-   lbed:"bed (sovrapposizione)",lvol:"volume",fire:"🔥 fuoco",lfirevol:"volume fuoco",hgates:"porte (colpi)",hmeas:"misura · collasso (Born)",
+   lbed:"bed (sovrapposizione)",lvol:"volume",ambient:"ambiente",lfirevol:"livello",lfirecr:"crepitio",lfiretone:"colore",lfiregrit:"disturbo",hgates:"porte (colpi)",hmeas:"misura · collasso (Born)",
    lmusical:"collasso armonico",lauto:"auto-misura a tempo",lbpm:"bpm",lsub:"ritmo · passi per battito",lswing:"swing",
    hrec:"registrazione",keysnote:"tasti: [1] misura Z · [2] misura X · [3] misura Y · [spazio] base corrente",
    lview:"vista (per registrazione / live)",vwfull:"piena (con scritte)",vwsph:"solo sfera",vwmin:"essenziale (profili)",back:"← spiegazione del modello",
@@ -251,7 +257,7 @@ var STR={
    rState:"stato",rSup:"sovrapposizione",rColl:"collassato",rLast:"ultimo esito",rNone:"—",rField:"campo"},
  en:{sub:"continuous precession · measurement",audio:"◉ Audio",hfield:"field / evolution",lspeed:"speed",
    hsound:"sound",lroot:"root Hz",lrange:"range (semitones)",lquant:"quantize to scale",llead:"lead voice",
-   lbed:"bed (superposition)",lvol:"volume",fire:"🔥 fire",lfirevol:"fire volume",hgates:"gates (kicks)",hmeas:"measure · collapse (Born)",
+   lbed:"bed (superposition)",lvol:"volume",ambient:"ambience",lfirevol:"level",lfirecr:"crackle",lfiretone:"tone",lfiregrit:"grit",hgates:"gates (kicks)",hmeas:"measure · collapse (Born)",
    lmusical:"harmonic collapse",lauto:"auto-measure on beat",lbpm:"bpm",lsub:"rhythm · steps per beat",lswing:"swing",
    hrec:"recording",keysnote:"keys: [1] measure Z · [2] measure X · [3] measure Y · [space] current basis",
    lview:"view (for recording / live)",vwfull:"full (with labels)",vwsph:"sphere only",vwmin:"minimal (profiles)",back:"← model explanation",
@@ -314,21 +320,26 @@ function collapseFreq(b,bit,fRef){
 /* ---- audio ---- */
 var AC=null,master,leadOsc,leadOsc2,leadGain,leadFilter,tremGain,lfoDepth,panner,o0,o1,g0,g1,bedGain,started=false;
 var MOBILE=(window.matchMedia&&window.matchMedia('(max-width:760px)').matches)||/Mobi|Android|iPhone|iPod/i.test(navigator.userAgent||'');
-/* ---- fuoco: letto ambientale opzionale (rumore caldo + crepitii), con volume ---- */
-var fireSrc=null,fireGain=null,fireLP=null,fireOn=false,fireVol=0.5;
-function makeFireBuffer(){var sr=AC.sampleRate,n=Math.floor(sr*7),b=AC.createBuffer(1,n,sr),d=b.getChannelData(0);
-  var brown=0,env=0,col=0;
-  for(var i=0;i<n;i++){var w=Math.random()*2-1;brown=(brown+0.02*w)/1.02;var s=brown*3.2;
-    if(env<=0.0003&&Math.random()<0.0012){env=0.4+Math.random()*0.6;col=0.3+Math.random()*0.7;}
-    if(env>0.0003){s+=(Math.random()*2-1)*env*col;env*=0.86+0.08*Math.random();}
-    d[i]=s*0.22;}
-  var xf=Math.min(2000,(n*0.02)|0);for(var k=0;k<xf;k++){var a=k/xf;d[k]=d[k]*a+d[n-xf+k]*(1-a);}
+/* ---- ambiente: combustione di legna (bed caldo + crepitii risonanti + disturbo), con opzioni ---- */
+var fireSrc=null,fireGain=null,fireLP=null,fireOn=false,fireVol=0.5,fireDens=0.6,fireTone=0.55,fireGrit=0.35;
+function fireCut(){return 500*Math.pow(2,fireTone*5.3);}   // colore: lowpass 500Hz..~19kHz
+function makeFireBuffer(){var sr=AC.sampleRate,n=Math.floor(sr*8),b=AC.createBuffer(1,n,sr),d=b.getChannelData(0);
+  var brown=0,env=0,col=0,ra=0,rp=0,rw=0,rd=0,pp=0.0005+fireDens*0.0055,g=fireGrit;
+  for(var i=0;i<n;i++){var w=Math.random()*2-1;brown=(brown+0.02*w)/1.02;var s=brown*2.6+w*g*0.07;   // bed caldo + sizzle (disturbo)
+    if(env<=0.0004&&ra<0.0006&&Math.random()<pp){env=0.35+Math.random()*0.65;col=0.3+Math.random()*0.7;
+      ra=0.22+Math.random()*0.55;rw=2*Math.PI*(280+Math.random()*1500)/sr;rp=0;rd=Math.exp(-1/(sr*(0.006+Math.random()*0.03)));}
+    if(env>0.0004){s+=(Math.random()*2-1)*env*col*(1+g);env*=0.85+0.06*Math.random();}
+    if(ra>0.0006){s+=Math.sin(rp)*ra*0.5;rp+=rw;ra*=rd;}      // risonanza "legnosa" del crepitio
+    d[i]=s*0.2;}
+  if(g>0.001){var kk=1+g*2.4;for(var j=0;j<n;j++)d[j]=Math.tanh(d[j]*kk)/(1+g*0.6);}   // disturbo = soft-clip
+  var xf=Math.min(2200,(n*0.02)|0);for(var m=0;m<xf;m++){var a=m/xf;d[m]=d[m]*a+d[n-xf+m]*(1-a);}
   return b;}
-function initFire(){if(fireSrc||!AC||!master)return;
-  fireSrc=AC.createBufferSource();fireSrc.buffer=makeFireBuffer();fireSrc.loop=true;
-  fireLP=AC.createBiquadFilter();fireLP.type='lowpass';fireLP.frequency.value=3200;fireLP.Q.value=0.3;
-  fireGain=AC.createGain();fireGain.gain.value=0;
-  fireSrc.connect(fireLP);fireLP.connect(fireGain);fireGain.connect(master);fireSrc.start();}
+function startFireSrc(){if(!AC||!fireLP)return;var ns=AC.createBufferSource();ns.buffer=makeFireBuffer();ns.loop=true;ns.connect(fireLP);ns.start();
+  if(fireSrc){try{fireSrc.stop(AC.currentTime+0.04);}catch(e){}}fireSrc=ns;}
+function initFire(){if(fireLP||!AC||!master)return;
+  fireLP=AC.createBiquadFilter();fireLP.type='lowpass';fireLP.frequency.value=fireCut();fireLP.Q.value=0.3;
+  fireGain=AC.createGain();fireGain.gain.value=0;fireLP.connect(fireGain);fireGain.connect(master);startFireSrc();}
+function rebuildFire(){if(fireLP)startFireSrc();}
 function initAudio(){
   if(started)return;
   AC=new (window.AudioContext||window.webkitAudioContext)();
@@ -414,8 +425,11 @@ function setBasis(b){basis=b;document.getElementById('mz').classList.toggle('on'
 
 /* ---- UI ---- */
 document.getElementById('play').addEventListener('click',function(){if(!started)initAudio();else if(AC.state==='suspended'&&!paused)AC.resume();});
-document.getElementById('firebtn').onclick=function(){if(!started)initAudio();if(!fireSrc)initFire();fireOn=!fireOn;this.classList.toggle('on',fireOn);if(fireGain&&AC)fireGain.gain.setTargetAtTime(fireOn?fireVol:0,AC.currentTime,fireOn?0.35:0.6);};
+document.getElementById('firebtn').onclick=function(){if(!started)initAudio();if(!fireLP)initFire();fireOn=!fireOn;this.classList.toggle('on',fireOn);if(fireGain&&AC)fireGain.gain.setTargetAtTime(fireOn?fireVol:0,AC.currentTime,fireOn?0.35:0.6);};
 document.getElementById('firevol').oninput=function(){fireVol=parseFloat(this.value);document.getElementById('vfirevol').textContent=fireVol.toFixed(2);if(fireOn&&fireGain&&AC)fireGain.gain.setTargetAtTime(fireVol,AC.currentTime,0.05);};
+document.getElementById('firetone').oninput=function(){fireTone=parseFloat(this.value);document.getElementById('vfiretone').textContent=fireTone.toFixed(2);if(fireLP&&AC)fireLP.frequency.setTargetAtTime(fireCut(),AC.currentTime,0.05);};
+document.getElementById('firecr').oninput=function(){fireDens=parseFloat(this.value);document.getElementById('vfirecr').textContent=fireDens.toFixed(2);};document.getElementById('firecr').onchange=function(){rebuildFire();};
+document.getElementById('firegrit').oninput=function(){fireGrit=parseFloat(this.value);document.getElementById('vfiregrit').textContent=fireGrit.toFixed(2);};document.getElementById('firegrit').onchange=function(){rebuildFire();};
 // ---- general pause: freezes the precession + trail AND the audio; resumes cleanly ----
 var paused=false;
 (function(){var pb=document.getElementById('pause');

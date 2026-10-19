@@ -94,9 +94,15 @@
       <button id="rhythmbtn" style="width:100%;margin-top:8px">ritmo: off</button>
       <label data-t="lrhyvol">volume ritmo <span class="val" id="vrhyvol">0.80</span></label>
       <input type="range" id="rhyvol" min="0" max="1.5" step="0.01" value="0.8">
-      <button id="firebtn" data-t="fire" style="width:100%;margin-top:8px">🔥 fuoco</button>
-      <label data-t="lfirevol">volume fuoco <span class="val" id="vfirevol">0.50</span></label>
+      <button id="firebtn" data-t="ambient" style="width:100%;margin-top:8px">ambiente</button>
+      <label data-t="lfirevol">livello <span class="val" id="vfirevol">0.50</span></label>
       <input type="range" id="firevol" min="0" max="1" step="0.01" value="0.5">
+      <label data-t="lfirecr">crepitio <span class="val" id="vfirecr">0.60</span></label>
+      <input type="range" id="firecr" min="0" max="1" step="0.01" value="0.6">
+      <label data-t="lfiretone">colore <span class="val" id="vfiretone">0.55</span></label>
+      <input type="range" id="firetone" min="0" max="1" step="0.01" value="0.55">
+      <label data-t="lfiregrit">disturbo <span class="val" id="vfiregrit">0.35</span></label>
+      <input type="range" id="firegrit" min="0" max="1" step="0.01" value="0.35">
     </div>
     <div class="card"><div class="read" id="readout"></div></div>
   </div>
@@ -115,13 +121,13 @@ var STR={
  it:{sub:"stati di Fock, coerenti · n quanti = n-esima armonica",audio:"◉ Audio",ground:"stato |0⟩",hstate:"stato = Σ cₙ|n⟩",
    lalpha:"α · stato coerente (classicità)",keyhelpL:"tasti",keyhelp:'<b>spazio</b> Audio · <b>r</b> ritmo on/off · <b>0</b> stato |0⟩',
    qexpl:'Uno <b>stato coerente</b> (α grande) è ciò che più assomiglia a un oscillatore <b>classico</b>: il pacchetto oscilla rigido come una massa su una molla. Con <b>pochi quanti</b> emerge la discretizzazione: un singolo autostato di energia è <b>stazionario</b> e quindi <b>muto</b> — impossibile per un oscillatore classico, che con energia si muove sempre.',
-   pcoh:"coerente",hsound:"suono",lwave:"timbro",lcut:"morbidezza · lowpass",lom:"frequenza ω (fondamentale)",lspeed:"velocità",lvol:"volume",lrhyvol:"volume ritmo",fire:"🔥 fuoco",lfirevol:"volume fuoco",back:"← spiegazione del modello",
+   pcoh:"coerente",hsound:"suono",lwave:"timbro",lcut:"morbidezza · lowpass",lom:"frequenza ω (fondamentale)",lspeed:"velocità",lvol:"volume",lrhyvol:"volume ritmo",ambient:"ambiente",lfirevol:"livello",lfirecr:"crepitio",lfiretone:"colore",lfiregrit:"disturbo",back:"← spiegazione del modello",
    hint:'▶ premi <b>Audio</b>. Un singolo autostato |n⟩ è <b>muto</b> (stazionario):<br>solo una <b>sovrapposizione</b> di energie diverse batte nel tempo e produce suono.',
    wavelabel:"|ψ(x,t)|²  ·  ⟨x⟩ oscilla a ω",silent:"stato fondamentale: fermo e muto",superp:"sovrapposizione: batte a multipli di ω → armoniche"},
  en:{sub:"Fock & coherent states · n quanta = n-th harmonic",audio:"◉ Audio",ground:"state |0⟩",hstate:"state = Σ cₙ|n⟩",
    lalpha:"α · coherent state (classicality)",keyhelpL:"keys",keyhelp:'<b>space</b> Audio · <b>r</b> rhythm on/off · <b>0</b> state |0⟩',
    qexpl:'A <b>coherent state</b> (large α) is the closest thing to a <b>classical</b> oscillator: the packet swings rigidly like a mass on a spring. With <b>few quanta</b> the discreteness emerges: a single energy eigenstate is <b>stationary</b> and therefore <b>silent</b> — impossible for a classical oscillator, which always moves when it has energy.',
-   pcoh:"coherent",hsound:"sound",lwave:"timbre",lcut:"softness · lowpass",lom:"frequency ω (fundamental)",lspeed:"speed",lvol:"volume",lrhyvol:"rhythm volume",fire:"🔥 fire",lfirevol:"fire volume",back:"← model explanation",
+   pcoh:"coherent",hsound:"sound",lwave:"timbre",lcut:"softness · lowpass",lom:"frequency ω (fundamental)",lspeed:"speed",lvol:"volume",lrhyvol:"rhythm volume",ambient:"ambience",lfirevol:"level",lfirecr:"crackle",lfiretone:"tone",lfiregrit:"grit",back:"← model explanation",
    hint:'▶ press <b>Audio</b>. A single eigenstate |n⟩ is <b>silent</b> (stationary):<br>only a <b>superposition</b> of different energies beats in time and makes sound.',
    wavelabel:"|ψ(x,t)|²  ·  ⟨x⟩ oscillates at ω",silent:"ground state: still and silent",superp:"superposition: beats at multiples of ω → harmonics"}
 };
@@ -146,21 +152,26 @@ function bongo(f,v){if(!percBus)return;var t=AC.currentTime;var o=AC.createOscil
   var g=AC.createGain();g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.5*v,t+0.005);g.gain.exponentialRampToValueAtTime(0.0006,t+0.18);
   o.connect(g);g.connect(percBus);o.start(t);o.stop(t+0.2);
   var s=AC.createBufferSource();s.buffer=percNoise;var hp=AC.createBiquadFilter();hp.type='highpass';hp.frequency.value=1800;var ng=AC.createGain();ng.gain.setValueAtTime(0.22*v,t);ng.gain.exponentialRampToValueAtTime(0.0006,t+0.03);s.connect(hp);hp.connect(ng);ng.connect(percBus);s.start(t);s.stop(t+0.04);}
-/* ---- fuoco: letto ambientale opzionale (rumore caldo + crepitii), con volume ---- */
-var fireSrc=null,fireGain=null,fireLP=null,fireOn=false,fireVol=0.5;
-function makeFireBuffer(){var sr=AC.sampleRate,n=Math.floor(sr*7),b=AC.createBuffer(1,n,sr),d=b.getChannelData(0);
-  var brown=0,env=0,col=0;
-  for(var i=0;i<n;i++){var w=Math.random()*2-1;brown=(brown+0.02*w)/1.02;var s=brown*3.2;
-    if(env<=0.0003&&Math.random()<0.0012){env=0.4+Math.random()*0.6;col=0.3+Math.random()*0.7;}
-    if(env>0.0003){s+=(Math.random()*2-1)*env*col;env*=0.86+0.08*Math.random();}
-    d[i]=s*0.22;}
-  var xf=Math.min(2000,(n*0.02)|0);for(var k=0;k<xf;k++){var a=k/xf;d[k]=d[k]*a+d[n-xf+k]*(1-a);}
+/* ---- ambiente: combustione di legna (bed caldo + crepitii risonanti + disturbo), con opzioni ---- */
+var fireSrc=null,fireGain=null,fireLP=null,fireOn=false,fireVol=0.5,fireDens=0.6,fireTone=0.55,fireGrit=0.35;
+function fireCut(){return 500*Math.pow(2,fireTone*5.3);}   // colore: lowpass 500Hz..~19kHz
+function makeFireBuffer(){var sr=AC.sampleRate,n=Math.floor(sr*8),b=AC.createBuffer(1,n,sr),d=b.getChannelData(0);
+  var brown=0,env=0,col=0,ra=0,rp=0,rw=0,rd=0,pp=0.0005+fireDens*0.0055,g=fireGrit;
+  for(var i=0;i<n;i++){var w=Math.random()*2-1;brown=(brown+0.02*w)/1.02;var s=brown*2.6+w*g*0.07;   // bed caldo + sizzle (disturbo)
+    if(env<=0.0004&&ra<0.0006&&Math.random()<pp){env=0.35+Math.random()*0.65;col=0.3+Math.random()*0.7;
+      ra=0.22+Math.random()*0.55;rw=2*Math.PI*(280+Math.random()*1500)/sr;rp=0;rd=Math.exp(-1/(sr*(0.006+Math.random()*0.03)));}
+    if(env>0.0004){s+=(Math.random()*2-1)*env*col*(1+g);env*=0.85+0.06*Math.random();}
+    if(ra>0.0006){s+=Math.sin(rp)*ra*0.5;rp+=rw;ra*=rd;}      // risonanza "legnosa" del crepitio
+    d[i]=s*0.2;}
+  if(g>0.001){var kk=1+g*2.4;for(var j=0;j<n;j++)d[j]=Math.tanh(d[j]*kk)/(1+g*0.6);}   // disturbo = soft-clip
+  var xf=Math.min(2200,(n*0.02)|0);for(var m=0;m<xf;m++){var a=m/xf;d[m]=d[m]*a+d[n-xf+m]*(1-a);}
   return b;}
-function initFire(){if(fireSrc||!AC||!master)return;
-  fireSrc=AC.createBufferSource();fireSrc.buffer=makeFireBuffer();fireSrc.loop=true;
-  fireLP=AC.createBiquadFilter();fireLP.type='lowpass';fireLP.frequency.value=3200;fireLP.Q.value=0.3;
-  fireGain=AC.createGain();fireGain.gain.value=0;
-  fireSrc.connect(fireLP);fireLP.connect(fireGain);fireGain.connect(master);fireSrc.start();}
+function startFireSrc(){if(!AC||!fireLP)return;var ns=AC.createBufferSource();ns.buffer=makeFireBuffer();ns.loop=true;ns.connect(fireLP);ns.start();
+  if(fireSrc){try{fireSrc.stop(AC.currentTime+0.04);}catch(e){}}fireSrc=ns;}
+function initFire(){if(fireLP||!AC||!master)return;
+  fireLP=AC.createBiquadFilter();fireLP.type='lowpass';fireLP.frequency.value=fireCut();fireLP.Q.value=0.3;
+  fireGain=AC.createGain();fireGain.gain.value=0;fireLP.connect(fireGain);fireGain.connect(master);startFireSrc();}
+function rebuildFire(){if(fireLP)startFireSrc();}
 function initAudio(){ if(started)return;
   AC=new (window.AudioContext||window.webkitAudioContext)();
   master=AC.createGain();master.gain.value=P.vol;
@@ -264,8 +275,11 @@ $('wave').onchange=function(){P.wave=this.value;for(var i=0;i<harm.length;i++)ha
 $('cut').oninput=function(){P.cut=parseFloat(this.value);$('vcut').textContent=Math.round(P.cut);if(toneLP)toneLP.frequency.setTargetAtTime(P.cut,AC.currentTime,0.03);};
 (function(){var rb=$('rhythmbtn');if(rb){function lab(){rb.textContent=(LANG==='it'?'ritmo: ':'rhythm: ')+(percOn?'on':'off');}
   rb.onclick=function(){percOn=!percOn;rb.classList.toggle('on',percOn);lab();};window.__rhyLab=lab;lab();}
-$('firebtn').onclick=function(){if(!started)initAudio();if(!fireSrc)initFire();fireOn=!fireOn;this.classList.toggle('on',fireOn);if(fireGain&&AC)fireGain.gain.setTargetAtTime(fireOn?fireVol:0,AC.currentTime,fireOn?0.35:0.6);};
+$('firebtn').onclick=function(){if(!started)initAudio();if(!fireLP)initFire();fireOn=!fireOn;this.classList.toggle('on',fireOn);if(fireGain&&AC)fireGain.gain.setTargetAtTime(fireOn?fireVol:0,AC.currentTime,fireOn?0.35:0.6);};
 $('firevol').oninput=function(){fireVol=parseFloat(this.value);$('vfirevol').textContent=fireVol.toFixed(2);if(fireOn&&fireGain&&AC)fireGain.gain.setTargetAtTime(fireVol,AC.currentTime,0.05);};
+$('firetone').oninput=function(){fireTone=parseFloat(this.value);$('vfiretone').textContent=fireTone.toFixed(2);if(fireLP&&AC)fireLP.frequency.setTargetAtTime(fireCut(),AC.currentTime,0.05);};
+$('firecr').oninput=function(){fireDens=parseFloat(this.value);$('vfirecr').textContent=fireDens.toFixed(2);};$('firecr').onchange=function(){rebuildFire();};
+$('firegrit').oninput=function(){fireGrit=parseFloat(this.value);$('vfiregrit').textContent=fireGrit.toFixed(2);};$('firegrit').onchange=function(){rebuildFire();};
   var rv=$('rhyvol');if(rv)rv.oninput=function(){percVol=parseFloat(rv.value);$('vrhyvol').textContent=percVol.toFixed(2);if(percBus&&AC)percBus.gain.setTargetAtTime(percVol,AC.currentTime,0.03);};})();
 /* ---- REC AUDIO (m4a / AAC, fallback webm-opus) ---- */
 (function(){var b=$('recaudiobtn');if(!b)return;var rec=null,chunks=[],dest=null,DEF='● REC audio · m4a';

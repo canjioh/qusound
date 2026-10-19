@@ -90,9 +90,15 @@
       <button id="rhythmbtn" style="width:100%;margin-top:8px">ritmo: off</button>
       <label data-t="lrhyvol">volume ritmo <span class="val" id="vrhyvol">0.80</span></label>
       <input type="range" id="rhyvol" min="0" max="1.5" step="0.01" value="0.8">
-      <button id="firebtn" data-t="fire" style="width:100%;margin-top:8px">🔥 fuoco</button>
-      <label data-t="lfirevol">volume fuoco <span class="val" id="vfirevol">0.50</span></label>
+      <button id="firebtn" data-t="ambient" style="width:100%;margin-top:8px">ambiente</button>
+      <label data-t="lfirevol">livello <span class="val" id="vfirevol">0.50</span></label>
       <input type="range" id="firevol" min="0" max="1" step="0.01" value="0.5">
+      <label data-t="lfirecr">crepitio <span class="val" id="vfirecr">0.60</span></label>
+      <input type="range" id="firecr" min="0" max="1" step="0.01" value="0.6">
+      <label data-t="lfiretone">colore <span class="val" id="vfiretone">0.55</span></label>
+      <input type="range" id="firetone" min="0" max="1" step="0.01" value="0.55">
+      <label data-t="lfiregrit">disturbo <span class="val" id="vfiregrit">0.35</span></label>
+      <input type="range" id="firegrit" min="0" max="1" step="0.01" value="0.35">
     </div>
     <div class="card"><div class="read" id="readout"></div></div>
   </div>
@@ -109,7 +115,7 @@
 var LANG=(function(){try{return localStorage.getItem('qlang')||'en';}catch(e){return 'en';}})();
 var STR={
  it:{sub:"atomo + cavità · collasso e rinascita",audio:"◉ Audio",reset:"reset t=0",hfield:"campo & accoppiamento",
-   lnbar:"fotoni medi n̄",lg:"accoppiamento g",ldet:"detuning Δ",hsound:"suono",lwave:"timbro",lcut:"morbidezza · lowpass",lspeed:"velocità",lvol:"volume",lrhyvol:"volume ritmo",fire:"🔥 fuoco",lfirevol:"volume fuoco",
+   lnbar:"fotoni medi n̄",lg:"accoppiamento g",ldet:"detuning Δ",hsound:"suono",lwave:"timbro",lcut:"morbidezza · lowpass",lspeed:"velocità",lvol:"volume",lrhyvol:"volume ritmo",ambient:"ambiente",lfirevol:"livello",lfirecr:"crepitio",lfiretone:"colore",lfiregrit:"disturbo",
    back:"← spiegazione del modello",
    hint:'▶ premi <b>Audio</b>: l\'atomo eccitato scambia un fotone con la cavità.<br>Le oscillazioni di Rabi collassano e poi <b>rinascono</b>.',
    atom:"atomo",cav:"cavità",inv:"inversione atomica W(t) = ⟨σ_z⟩ · collasso → rinascita",
@@ -117,7 +123,7 @@ var STR={
    lspread:"granularità quantistica",keyhelpL:"tasti",keyhelp:'<b>spazio</b> Audio · <b>r</b> ritmo on/off',
    qexpl:'A <b>granularità 0</b> il campo ha un numero di fotoni definito: le oscillazioni di Rabi non collassano mai (limite quasi-classico). Alzandola, i diversi Ω<sub>n</sub> = 2g√(n+1) si sfasano → <b>collasso e rinascita</b>, effetto puramente quantistico.'},
  en:{sub:"atom + cavity · collapse and revival",audio:"◉ Audio",reset:"reset t=0",hfield:"field & coupling",
-   lnbar:"mean photons n̄",lg:"coupling g",ldet:"detuning Δ",hsound:"sound",lwave:"timbre",lcut:"softness · lowpass",lspeed:"speed",lvol:"volume",lrhyvol:"rhythm volume",fire:"🔥 fire",lfirevol:"fire volume",
+   lnbar:"mean photons n̄",lg:"coupling g",ldet:"detuning Δ",hsound:"sound",lwave:"timbre",lcut:"softness · lowpass",lspeed:"speed",lvol:"volume",lrhyvol:"rhythm volume",ambient:"ambience",lfirevol:"level",lfirecr:"crackle",lfiretone:"tone",lfiregrit:"grit",
    back:"← model explanation",
    hint:'▶ press <b>Audio</b>: the excited atom trades a photon with the cavity.<br>The Rabi oscillations collapse and then <b>revive</b>.',
    atom:"atom",cav:"cavity",inv:"atomic inversion W(t) = ⟨σ_z⟩ · collapse → revival",
@@ -155,21 +161,26 @@ function tom(f,v){if(!percBus)return;var t=AC.currentTime;var o=AC.createOscilla
   var s=AC.createBufferSource();s.buffer=percNoise;var hp=AC.createBiquadFilter();hp.type='highpass';hp.frequency.value=1600;var ng=AC.createGain();ng.gain.setValueAtTime(0.2*v,t);ng.gain.exponentialRampToValueAtTime(0.0006,t+0.03);s.connect(hp);hp.connect(ng);ng.connect(percBus);s.start(t);s.stop(t+0.04);}
 var SCALE=[0,2,4,7,9], ROOT=130.81;                        // C3 major pentatonic
 function scaleFreq(deg){var o=Math.floor(deg/5),i=((deg%5)+5)%5;return ROOT*Math.pow(2,o)*Math.pow(2,SCALE[i]/12);}
-/* ---- fuoco: letto ambientale opzionale (rumore caldo + crepitii), con volume ---- */
-var fireSrc=null,fireGain=null,fireLP=null,fireOn=false,fireVol=0.5;
-function makeFireBuffer(){var sr=AC.sampleRate,n=Math.floor(sr*7),b=AC.createBuffer(1,n,sr),d=b.getChannelData(0);
-  var brown=0,env=0,col=0;
-  for(var i=0;i<n;i++){var w=Math.random()*2-1;brown=(brown+0.02*w)/1.02;var s=brown*3.2;
-    if(env<=0.0003&&Math.random()<0.0012){env=0.4+Math.random()*0.6;col=0.3+Math.random()*0.7;}
-    if(env>0.0003){s+=(Math.random()*2-1)*env*col;env*=0.86+0.08*Math.random();}
-    d[i]=s*0.22;}
-  var xf=Math.min(2000,(n*0.02)|0);for(var k=0;k<xf;k++){var a=k/xf;d[k]=d[k]*a+d[n-xf+k]*(1-a);}
+/* ---- ambiente: combustione di legna (bed caldo + crepitii risonanti + disturbo), con opzioni ---- */
+var fireSrc=null,fireGain=null,fireLP=null,fireOn=false,fireVol=0.5,fireDens=0.6,fireTone=0.55,fireGrit=0.35;
+function fireCut(){return 500*Math.pow(2,fireTone*5.3);}   // colore: lowpass 500Hz..~19kHz
+function makeFireBuffer(){var sr=AC.sampleRate,n=Math.floor(sr*8),b=AC.createBuffer(1,n,sr),d=b.getChannelData(0);
+  var brown=0,env=0,col=0,ra=0,rp=0,rw=0,rd=0,pp=0.0005+fireDens*0.0055,g=fireGrit;
+  for(var i=0;i<n;i++){var w=Math.random()*2-1;brown=(brown+0.02*w)/1.02;var s=brown*2.6+w*g*0.07;   // bed caldo + sizzle (disturbo)
+    if(env<=0.0004&&ra<0.0006&&Math.random()<pp){env=0.35+Math.random()*0.65;col=0.3+Math.random()*0.7;
+      ra=0.22+Math.random()*0.55;rw=2*Math.PI*(280+Math.random()*1500)/sr;rp=0;rd=Math.exp(-1/(sr*(0.006+Math.random()*0.03)));}
+    if(env>0.0004){s+=(Math.random()*2-1)*env*col*(1+g);env*=0.85+0.06*Math.random();}
+    if(ra>0.0006){s+=Math.sin(rp)*ra*0.5;rp+=rw;ra*=rd;}      // risonanza "legnosa" del crepitio
+    d[i]=s*0.2;}
+  if(g>0.001){var kk=1+g*2.4;for(var j=0;j<n;j++)d[j]=Math.tanh(d[j]*kk)/(1+g*0.6);}   // disturbo = soft-clip
+  var xf=Math.min(2200,(n*0.02)|0);for(var m=0;m<xf;m++){var a=m/xf;d[m]=d[m]*a+d[n-xf+m]*(1-a);}
   return b;}
-function initFire(){if(fireSrc||!AC||!master)return;
-  fireSrc=AC.createBufferSource();fireSrc.buffer=makeFireBuffer();fireSrc.loop=true;
-  fireLP=AC.createBiquadFilter();fireLP.type='lowpass';fireLP.frequency.value=3200;fireLP.Q.value=0.3;
-  fireGain=AC.createGain();fireGain.gain.value=0;
-  fireSrc.connect(fireLP);fireLP.connect(fireGain);fireGain.connect(master);fireSrc.start();}
+function startFireSrc(){if(!AC||!fireLP)return;var ns=AC.createBufferSource();ns.buffer=makeFireBuffer();ns.loop=true;ns.connect(fireLP);ns.start();
+  if(fireSrc){try{fireSrc.stop(AC.currentTime+0.04);}catch(e){}}fireSrc=ns;}
+function initFire(){if(fireLP||!AC||!master)return;
+  fireLP=AC.createBiquadFilter();fireLP.type='lowpass';fireLP.frequency.value=fireCut();fireLP.Q.value=0.3;
+  fireGain=AC.createGain();fireGain.gain.value=0;fireLP.connect(fireGain);fireGain.connect(master);startFireSrc();}
+function rebuildFire(){if(fireLP)startFireSrc();}
 function initAudio(){ if(started)return;
   AC=new (window.AudioContext||window.webkitAudioContext)();
   master=AC.createGain();master.gain.value=P.vol;
@@ -266,8 +277,11 @@ $('wave').onchange=function(){P.wave=this.value;for(var i=0;i<chord.length;i++)c
 $('cut').oninput=function(){P.cut=parseFloat(this.value);$('vcut').textContent=Math.round(P.cut);if(toneLP)toneLP.frequency.setTargetAtTime(P.cut,AC.currentTime,0.03);};
 (function(){var rb=$('rhythmbtn');if(rb){function lab(){rb.textContent=(LANG==='it'?'ritmo: ':'rhythm: ')+(percOn?'on':'off');}
   rb.onclick=function(){percOn=!percOn;rb.classList.toggle('on',percOn);lab();};window.__rhyLab=lab;lab();}
-$('firebtn').onclick=function(){if(!started)initAudio();if(!fireSrc)initFire();fireOn=!fireOn;this.classList.toggle('on',fireOn);if(fireGain&&AC)fireGain.gain.setTargetAtTime(fireOn?fireVol:0,AC.currentTime,fireOn?0.35:0.6);};
+$('firebtn').onclick=function(){if(!started)initAudio();if(!fireLP)initFire();fireOn=!fireOn;this.classList.toggle('on',fireOn);if(fireGain&&AC)fireGain.gain.setTargetAtTime(fireOn?fireVol:0,AC.currentTime,fireOn?0.35:0.6);};
 $('firevol').oninput=function(){fireVol=parseFloat(this.value);$('vfirevol').textContent=fireVol.toFixed(2);if(fireOn&&fireGain&&AC)fireGain.gain.setTargetAtTime(fireVol,AC.currentTime,0.05);};
+$('firetone').oninput=function(){fireTone=parseFloat(this.value);$('vfiretone').textContent=fireTone.toFixed(2);if(fireLP&&AC)fireLP.frequency.setTargetAtTime(fireCut(),AC.currentTime,0.05);};
+$('firecr').oninput=function(){fireDens=parseFloat(this.value);$('vfirecr').textContent=fireDens.toFixed(2);};$('firecr').onchange=function(){rebuildFire();};
+$('firegrit').oninput=function(){fireGrit=parseFloat(this.value);$('vfiregrit').textContent=fireGrit.toFixed(2);};$('firegrit').onchange=function(){rebuildFire();};
   var rv=$('rhyvol');if(rv)rv.oninput=function(){percVol=parseFloat(rv.value);$('vrhyvol').textContent=percVol.toFixed(2);if(percBus&&AC)percBus.gain.setTargetAtTime(percVol,AC.currentTime,0.03);};})();
 /* ---- REC AUDIO (m4a / AAC, fallback webm-opus) ---- */
 (function(){var b=$('recaudiobtn');if(!b)return;var rec=null,chunks=[],dest=null,DEF='● REC audio · m4a';
